@@ -6,6 +6,7 @@ Key flags should have a behavior identical to raspivid
 """
 import argparse
 import sys
+import math
 import re
 
 import baslerpi.utils
@@ -29,7 +30,7 @@ ap = argparse.ArgumentParser(add_help=False)
 ap.add_argument("-h", "--height", type=int, default=960)
 ap.add_argument("-w", "--width", type=int, default=1280)
 ap.add_argument("-?", dest="print_help", default=False, action="store_true")
-ap.add_argument("-o", "--output", required=True)
+ap.add_argument("-o", "--output", required=False)
 ap.add_argument("-fps", "--framerate", default=30)
 ap.add_argument("-ss", "--shutter", default=15000, help="Manually controls the speed of the camera’s shutter in microseconds (i.e. 1e6 us = 1s")
 ap.add_argument("-v", "--verbose", dest="verbose", default=False, action="store_true")
@@ -40,8 +41,8 @@ ap.add_argument("-cfx", "--colfx", default="128:128", help="""
     A value of 128:128 will result in a greyscale image
     """
 )
-ap.add_argument("-ISO", "--ISO", type=range_limited_int_type, help="TODO ISO sensitivity")
-ap.add_argument("-roi", "--roi", default=5000, nargs="4",  help="TODO Allows part of the camera sensor to be specified as the capture source. Ex 0 0 100 100")
+ap.add_argument("-ISO", "--ISO", dest="iso", type=range_limited_int_type, help="TODO ISO sensitivity")
+#ap.add_argument("-roi", "--roi", nargs="4",  help="TODO Allows part of the camera sensor to be specified as the capture source. Ex 0 0 100 100", required=False, default="0 0 math.inf math.inf")
 ap.add_argument("-n", "--no-preview", dest="preview", default=False, action="store_false", help="TODO Does not display a preview window while capturing.")
 ap.add_argument("-p", "--preview", dest="preview", nargs=4, help=
     """

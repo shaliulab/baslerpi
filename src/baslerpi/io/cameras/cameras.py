@@ -11,7 +11,7 @@ logger.setLevel(logging.INFO)
 
 class BaseCamera:
 
-    def __init__(self, width=1280, height=960, drop_each=1, colfx="128:128" max_duration=None,
+    def __init__(self, width=1280, height=960, drop_each=1, colfx="128:128", max_duration=None,
         use_wall_clock=True, framerate=30, shutter=15000, timeout=5000, wait_timeout=30000
     ):
         """
