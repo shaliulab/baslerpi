@@ -11,7 +11,9 @@ logger.setLevel(logging.INFO)
 
 class BaseCamera:
 
-    def __init__(self, *args, drop_each=1, max_duration=None, use_wall_clock=True, framerate=30, exposuretime=15000, timeout=30000, **kwargs):
+    def __init__(self, width=1280, height=960, drop_each=1, colfx="128:128" max_duration=None,
+        use_wall_clock=True, framerate=30, shutter=15000, timeout=5000, wait_timeout=30000
+    ):
         """
         The template class to generate and use video streams.
         Inspired by the Ethoscope project.
@@ -51,7 +53,8 @@ class BaseCamera:
         self._framerate = framerate
         self._exposuretime = exposuretime
         self._drop_each = drop_each
-        self._timeout = timeout
+        self._timeout = wait_timeout
+        self._recording_timeout = timeout
 
 
     def time_stamp(self):
@@ -113,7 +116,7 @@ class BaseCamera:
                 logger.debug("Time: %s, Framerate: %s", t_ms, self.framerate)
                 yield t_ms, out
 
-            if self._max_duration is not None and t_ms > self._max_duration * 1000:
+            if (self._recording_timeout is not None and self._recording_timeout != 0) and t_ms > self._recording_timeout * 1000:
                 break
 
     def _next_time_image(self):

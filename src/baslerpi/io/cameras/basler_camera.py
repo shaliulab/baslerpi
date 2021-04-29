@@ -33,11 +33,7 @@ class BaslerCamera(BaseCamera):
     close():       Close the camera
     """
 
-    def __init__(self, *args, timeout=30000, greyworld=True, **kwargs):
-
-
-        self._timeout = timeout
-        kwargs["timeout"] = timeout
+    def __init__(self, *args, **kwargs):
         self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         super().__init__(*args, **kwargs)
 
