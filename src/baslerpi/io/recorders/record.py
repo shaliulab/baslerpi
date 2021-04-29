@@ -14,7 +14,7 @@ logger.addHandler(console)
 
 logger.info("Loading recorder... ")
 
-from fslpylon.io.cameras import BaslerCamera
+from baslerpi.io.cameras import BaslerCamera
 
 class BaseRecorder(threading.Thread):
     """

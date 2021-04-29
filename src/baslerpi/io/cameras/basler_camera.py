@@ -10,8 +10,8 @@ from pypylon import pylon
 import cv2
 
 # Local library
-from fslpylon.decorators import drive_basler
-from fslpylon.io.cameras.cameras import BaseCamera
+from baslerpi.decorators import drive_basler
+from baslerpi.io.cameras.cameras import BaseCamera
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)

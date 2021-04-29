@@ -196,8 +196,8 @@ if __name__ == "__main__":
     frequency = args.frequency
 
     i = 0
-    from fslpylon.io.recorders import FFMPEGRecorder, ImgstoreRecorder
-    from fslpylon.io.cameras import OpenCVCamera, BaslerCamera
+    from baslerpi.io.recorders import FFMPEGRecorder, ImgstoreRecorder
+    from baslerpi.io.cameras import OpenCVCamera, BaslerCamera
 
 
     if args.camera == "OpenCV":

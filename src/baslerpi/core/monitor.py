@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 import cv2
 import numpy as np
 
-from fslpylon.io.cameras import BaslerCamera
-from fslpylon.io.recorders import Recorder
-from fslpylon.processing.compressor import Compressor
+from baslerpi.io.cameras import BaslerCamera
+from baslerpi.io.recorders import Recorder
+from baslerpi.processing.compressor import Compressor
 
 ap = argparse.ArgumentParser()
 
