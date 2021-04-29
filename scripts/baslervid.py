@@ -9,7 +9,7 @@ import sys
 import re
 
 import baslerpi.utils
-from basler.io.cameras.basler_camera import BaslerCamera
+from baslerpi.io.cameras.basler_camera import BaslerCamera
 
 def range_limited_int_type(arg):
     """ Type function for argparse - an int within some predefined bounds """
@@ -42,8 +42,8 @@ ap.add_argument("-cfx", "--colfx", default="128:128", help="""
 )
 ap.add_argument("-ISO", "--ISO", type=range_limited_int_type, help="TODO ISO sensitivity")
 ap.add_argument("-roi", "--roi", default=5000, nargs="4",  help="TODO Allows part of the camera sensor to be specified as the capture source. Ex 0 0 100 100")
-ap.add_argument("-n", "--no-preview" dest="preview", default=False, action="store_false", help="TODO Does not display a preview window while capturing.")
-ap.add_argument("-p", "--preview" dest="preview", nargs=4, help=
+ap.add_argument("-n", "--no-preview", dest="preview", default=False, action="store_false", help="TODO Does not display a preview window while capturing.")
+ap.add_argument("-p", "--preview", dest="preview", nargs=4, help=
     """
     TODO
     Sets the size of the preview window and where it appears.
@@ -68,7 +68,7 @@ camera = BaslerCamera(
   # shutter speed (exposure time)
   shutter=args.shutter,
   # ISO
-  iso = args.iso
+  iso = args.iso,
   # timeout
   timeout=args.timeout,
   # color scale of the camera
