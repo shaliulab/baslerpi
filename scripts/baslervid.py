@@ -21,13 +21,6 @@ config = read_config_yaml("conf/logging.yaml")
 logging.config.dictConfig(config)
 
 
-
-camera_logger = logging.getLogger("baslerpi.io.cameras.cameras")
-camera_logger.setLevel(logging.DEBUG)
-
-tcp_client_logger = logging.getLogger("baslerpi.web_utils.client")
-tcp_client_logger.setLevel(logging.DEBUG)
-
 def range_limited_int_type(arg):
     """ Type function for argparse - an int within some predefined bounds """
     MIN_VAL = 100
@@ -109,8 +102,11 @@ else:
         # normal path to video
         pass
     else:
+        host, port = protocol[1].split(":")
         # protocol
-        tcp_client = TCPClient("10.43.207.46", 8084)
+        print(port)
+        print(host)
+        tcp_client = TCPClient(host, int(port))
         tcp_client.daemon = True
         tcp_client.start()
 
