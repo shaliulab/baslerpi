@@ -25,7 +25,7 @@ loggers:
     level: DEBUG
     handlers: [console]
     propagate: no
-  baslerpi.web_utils.client:
+  baslerpi.web_utils:
     level: DEBUG
     handlers: [console]
     propagate: no
