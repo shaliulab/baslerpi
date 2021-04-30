@@ -8,8 +8,8 @@ import struct
 frame = np.random.randint(255, size=(900,800,3),dtype=np.uint8)
 
 
-TCP_IP = 'localhost'
-TCP_PORT = 8001
+TCP_IP = '10.43.207.46'
+TCP_PORT = 8082
 
 sock = socket.socket()
 sock.connect((TCP_IP, TCP_PORT))

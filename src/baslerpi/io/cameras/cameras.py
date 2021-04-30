@@ -3,7 +3,6 @@ __author__ = 'antonio'
 import logging
 import time
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=W0223
@@ -12,7 +11,7 @@ logger.setLevel(logging.INFO)
 class BaseCamera:
 
     def __init__(self, width=1280, height=960, drop_each=1, colfx="128:128", max_duration=None,
-        use_wall_clock=True, framerate=30, shutter=15000, timeout=5000, wait_timeout=30000
+        use_wall_clock=True, framerate=30, shutter=15000, iso=None, timeout=5000, wait_timeout=30000
     ):
         """
         The template class to generate and use video streams.
@@ -51,7 +50,7 @@ class BaseCamera:
         self._use_wall_clock = use_wall_clock
         self._start_time = None
         self._framerate = framerate
-        self._exposuretime = exposuretime
+        self._exposuretime = shutter
         self._drop_each = drop_each
         self._timeout = wait_timeout
         self._recording_timeout = timeout
@@ -116,7 +115,8 @@ class BaseCamera:
                 logger.debug("Time: %s, Framerate: %s", t_ms, self.framerate)
                 yield t_ms, out
 
-            if (self._recording_timeout is not None and self._recording_timeout != 0) and t_ms > self._recording_timeout * 1000:
+            if (self._recording_timeout is not None and self._recording_timeout != 0) and t_ms > self._recording_timeout:
+                logger.debug(f"Timeout ({self._recording_timeout}) ms reached. Terminating camera...")
                 break
 
     def _next_time_image(self):
