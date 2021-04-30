@@ -1,8 +1,14 @@
 __author__ = 'antonio'
 
 import logging
+import logging.config
 import time
 logger = logging.getLogger(__name__)
+
+from baslerpi.utils import read_config_yaml
+
+#config = read_config_yaml("scripts/logging.yaml")
+#logging.config.dictConfig(config)
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=W0223
@@ -112,6 +118,7 @@ class BaseCamera:
             at_least_one_frame = True
 
             if (self._frame_idx % self._drop_each) == 0:
+                logger.debug("Yielding frame")
                 logger.debug("Time: %s, Framerate: %s", t_ms, self.framerate)
                 yield t_ms, out
 

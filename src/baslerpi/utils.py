@@ -1,3 +1,5 @@
+import yaml
+
 def parse_protocol(x):
 
     supported_protocols = ["tcp", "udp"]
@@ -14,4 +16,9 @@ def parse_protocol(x):
         raise Exception(f"Protocol {protocol} not supported")
 
         
+
+def read_config_yaml(path):
+    with open(path, "r") as stream:
+        config = yaml.load(stream, Loader=yaml.FullLoader)
+    return config
 

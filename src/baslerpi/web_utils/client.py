@@ -7,20 +7,27 @@ import time
 import cv2
 import numpy as np
 
+logger = logging.getLogger(__name__)
+
 class TCPClient(threading.Thread):
 
     def __init__(self, ip, port, *args, **kwargs):
         self._ip = ip
         self._port = port
         self._encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
-        self._sock = socket.socket()
-        self._sock.connect((self._ip, self._port))
         self._queue = queue.Queue(maxsize=1)
         self._stop = threading.Event()
-
+        self.connect()
         super().__init__(*args, **kwargs)
 
+
+    def connect(self):
+        logger.debug("Opening socket")
+        self._sock = socket.socket()
+        self._sock.connect((self._ip, self._port))
+
     def queue(self, frame):
+        logger.debug("Queuing frame in TCP client")
         self._queue.put(frame)
 
     def stream(self, frame):
@@ -28,8 +35,13 @@ class TCPClient(threading.Thread):
         data = np.array(imgencode)
         stringData = data.tostring()
         send1 = str(len(stringData)).ljust(16)
-        self._sock.send(send1.encode("utf-8"));
-        self._sock.send(stringData);
+        logger.debug("Sending frame to TCP server")
+        try:
+            self._sock.send(send1.encode("utf-8"));
+            self._sock.send(stringData);
+        except (ConnectionResetError, BrokenPipeError):
+            self.close()
+            self.connect()
         return data
 
     def run(self):
@@ -37,19 +49,18 @@ class TCPClient(threading.Thread):
         while not self._stop.is_set():
             frame = self._queue.get()
             data = self.stream(frame)
-            decimg=cv2.imdecode(data,1)
-            cv2.imshow('CLIENT',decimg)
-            cv2.waitKey(1)
-
+            #decimg=cv2.imdecode(data,1)
         self.close()
 
     def close(self):
-        logging.info("Closing")
-        sock.close()
+        logger.debug("Closing socket")
+        self._sock.close()
 
     def stop(self):
-        logging.info("Stopping")
+        logger.debug("Stopping TCP server")
         self._stop.set()
+        time.sleep(1)
+        self.close()
 
 if __name__ == "__main__":
     frame = np.random.randint(255, size=(900,800,3),dtype=np.uint8)
@@ -58,8 +69,7 @@ if __name__ == "__main__":
 
     client = TCPClient(TCP_IP, TCP_PORT)
     client.queue(frame)
-    client.run()
-    time.sleep(1)
-    cliet.stop()
+    client.start()
+    client.stop()
 
 
