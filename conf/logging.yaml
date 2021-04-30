@@ -1,0 +1,35 @@
+version: 1
+disable_existing_loggers: true
+
+formatters:
+  simple:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  root:
+    format: '%(name)s - %(message)s'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
+
+  console_root:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: root
+    stream: ext://sys.stdout
+
+loggers:
+  baslerpi.io.cameras.cameras:
+    level: DEBUG
+    handlers: [console]
+    propagate: no
+  baslerpi.web_utils.client:
+    level: DEBUG
+    handlers: [console]
+    propagate: no
+
+root:
+  level: ERROR
+  handlers: [console_root]

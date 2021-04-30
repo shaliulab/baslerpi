@@ -8,9 +8,25 @@ import argparse
 import sys
 import math
 import re
+import logging
+import logging.config
 
-import baslerpi.utils
+import cv2
+
+from baslerpi.utils import parse_protocol, read_config_yaml
 from baslerpi.io.cameras.basler_camera import BaslerCamera
+from baslerpi.web_utils import TCPClient
+
+config = read_config_yaml("conf/logging.yaml")
+logging.config.dictConfig(config)
+
+
+
+camera_logger = logging.getLogger("baslerpi.io.cameras.cameras")
+camera_logger.setLevel(logging.DEBUG)
+
+tcp_client_logger = logging.getLogger("baslerpi.web_utils.client")
+tcp_client_logger.setLevel(logging.DEBUG)
 
 def range_limited_int_type(arg):
     """ Type function for argparse - an int within some predefined bounds """
@@ -34,7 +50,7 @@ ap.add_argument("-o", "--output", required=False)
 ap.add_argument("-fps", "--framerate", default=30)
 ap.add_argument("-ss", "--shutter", default=15000, help="Manually controls the speed of the camera’s shutter in microseconds (i.e. 1e6 us = 1s")
 ap.add_argument("-v", "--verbose", dest="verbose", default=False, action="store_true")
-ap.add_argument("-t", "--timeout", default=5000, help="Control the timeout, in ms, that the video will be recorded")
+ap.add_argument("-t", "--timeout", default=5000, type=int, help="Control the timeout, in ms, that the video will be recorded")
 ap.add_argument("-cfx", "--colfx", default="128:128", help="""
     TODO Allows the user to adjust the YUV colour space for fine-grained control of the final image.
     Values should be given as U:V , where U controls the chrominance and V the luminance.
@@ -77,19 +93,29 @@ camera = BaslerCamera(
 )
 
 
-protocol = parse_protocol(args.output)
-
-if protocol is None:
-  if args.output == "-":
-    # std out
+if args.output is None:
     pass
+    # just output on the screen
 
-  else:
-    # normal path to video
-    pass
-
-
+else:
+    protocol = parse_protocol(args.output)
+    
+    if protocol is None:
+      if args.output == "-":
+        # std out
+        pass
+    
+      else:
+        # normal path to video
+        pass
+    else:
+        # protocol
+        tcp_client = TCPClient("10.43.207.46", 8084)
+        tcp_client.daemon = True
+        tcp_client.start()
 
 camera.open()
-camera.start()
+for t_ms, frame in camera:
+    tcp_client.queue(frame)
 camera.close()
+tcp_client.stop()
