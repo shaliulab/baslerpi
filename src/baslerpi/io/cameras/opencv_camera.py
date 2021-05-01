@@ -15,8 +15,6 @@ console = logging.StreamHandler()
 console.setLevel(logging.INFO)
 logger.addHandler(console)
 
-logger.info("Loading... ")
-
 class OpenCVCamera(BaseCamera):
 
     def __init__(self, *args, video_path=None, wrap=False, greyworld=True, **kwargs):
