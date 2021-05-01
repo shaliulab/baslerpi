@@ -2,6 +2,7 @@ import argparse
 import sys
 import logging
 import logging.config
+import tempfile
 
 import cv2
 import matplotlib.pyplot as plt
@@ -18,7 +19,7 @@ def main():
     config = read_config_yaml("conf/logging.yaml")
     logging.config.dictConfig(config)
     logger = logging.getLogger(__name__)
-    
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port",   type=int, default=8084)
@@ -26,6 +27,7 @@ def main():
     ap.add_argument("--height", type=int, default=260)
     args = ap.parse_args()
 
+    temp_file = tempfile.NamedTemporaryFile(prefix="flyhostel_", suffix=".jpg").name
 
     tcp_server = TCPServer(args.host, args.port)
     tcp_server.daemon = True
@@ -35,6 +37,7 @@ def main():
         while True:
             success, frame = tcp_server.dequeue()
             if success:
+                cv2.imwrite(temp_file, frame)
                 frame = cv2.resize(frame, (args.width, args.height), interpolation=cv2.INTER_AREA)
                 image = Image.fromarray(np.uint8(frame))
                 if img is None:

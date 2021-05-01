@@ -41,19 +41,22 @@ class TCPServer(threading.Thread):
 
     def run(self):
         while not self._stop.is_set():
-            frame = self.receive()
-            self._queue.put(frame)
+            success, frame = self.receive()
+            if success:
+                self._queue.put(frame)
 
     def receive(self):
-
         logger.debug("Receiving frame")
         conn, addr = self._sock.accept()
         length = self.recvall(conn, 16)
-        stringData = self.recvall(conn, int(length))
-        data = np.frombuffer(stringData, dtype='uint8')
+        try:
+            stringData = self.recvall(conn, int(length))
+            data = np.frombuffer(stringData, dtype='uint8')
+        except TypeError:
+            return False, None
         decimg = cv2.imdecode(data, 1)
         logger.debug("Received frame was decoded successfully")
-        return decimg
+        return True, decimg
 
     def dequeue(self):
         success = False
