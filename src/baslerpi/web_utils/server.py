@@ -16,16 +16,20 @@ class TCPServer(threading.Thread):
     Receive TCP requests in the background
     """
 
+    _TICK_PERIOD = 1000
+
     def __init__(self, ip, port, *args, **kwargs):
 
         self._ip = ip
         self._port = port
-
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.bind((self._ip, self._port))
         self._sock.listen(True)
         self._queue = queue.Queue(maxsize=1)
         self._stop = threading.Event()
+        self._count = 0
+        self._start_time = time.time()
+        self._last_tick = self._start_time
         super().__init__(*args, **kwargs)
 
     @staticmethod
@@ -43,7 +47,13 @@ class TCPServer(threading.Thread):
         while not self._stop.is_set():
             success, frame = self.receive()
             if success:
+                self._count += 1
                 self._queue.put(frame)
+
+            if (time.time() - self._last_tick) > (self._TICK_PERIOD / 1000):
+                self._last_tick = time.time()
+                logger.info(f"Computed framerate {self._count / (self._TICK_PERIOD / 1000)}")
+                self._count = 0
 
     def receive(self):
         logger.debug("Receiving frame")
