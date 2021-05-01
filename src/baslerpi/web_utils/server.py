@@ -50,7 +50,7 @@ class TCPServer(threading.Thread):
         conn, addr = self._sock.accept()
         length = self.recvall(conn, 16)
         stringData = self.recvall(conn, int(length))
-        data = np.fromstring(stringData, dtype='uint8')
+        data = np.frombuffer(stringData, dtype='uint8')
         decimg = cv2.imdecode(data, 1)
         logger.debug("Received frame was decoded successfully")
         return decimg
