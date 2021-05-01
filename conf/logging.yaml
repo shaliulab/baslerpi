@@ -10,25 +10,30 @@ formatters:
 handlers:
   console:
     class: logging.StreamHandler
-    level: DEBUG
     formatter: simple
     stream: ext://sys.stdout
 
   console_root:
     class: logging.StreamHandler
-    level: DEBUG
+    level: WARNING 
     formatter: root
     stream: ext://sys.stdout
 
 loggers:
+  baslerpi:
+    level: WARNING
+    propage: yes
   baslerpi.io.cameras.cameras:
-    level: DEBUG
     handlers: [console]
+    level: INFO
     propagate: no
   baslerpi.web_utils:
-    level: DEBUG
     handlers: [console]
     propagate: no
+  baslerpi.processing.annotate:
+    handlers: [console]
+    propagate: no
+
 
 root:
   level: ERROR

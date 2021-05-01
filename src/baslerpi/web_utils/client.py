@@ -39,7 +39,8 @@ class TCPClient(threading.Thread):
         try:
             self._sock.send(send1.encode("utf-8"));
             self._sock.send(stringData);
-        except (ConnectionResetError, BrokenPipeError):
+        except (ConnectionResetError, BrokenPipeError) as error:
+            logger.warning(error)
             self.close()
             self.connect()
         return data
@@ -51,6 +52,7 @@ class TCPClient(threading.Thread):
             data = self.stream(frame)
             #decimg=cv2.imdecode(data,1)
         self.close()
+
 
     def close(self):
         logger.debug("Closing socket")

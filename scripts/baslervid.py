@@ -12,11 +12,13 @@ import logging
 import logging.config
 
 import cv2
+import numpy as np
 
 from baslerpi.utils import parse_protocol, read_config_yaml
 from baslerpi.io.cameras.basler_camera import BaslerCamera
 from baslerpi.io.cameras.emulator_camera import EmulatorCamera 
 from baslerpi.web_utils import TCPClient
+from baslerpi.processing.annotate import Annotator
 
 config = read_config_yaml("conf/logging.yaml")
 logging.config.dictConfig(config)
@@ -43,8 +45,8 @@ ap.add_argument("-h", "--height", type=int, default=960)
 ap.add_argument("-w", "--width", type=int, default=1280)
 ap.add_argument("-?", dest="print_help", default=False, action="store_true")
 ap.add_argument("-o", "--output", required=False)
-ap.add_argument("-fps", "--framerate", default=30)
-ap.add_argument("-ss", "--shutter", default=15000, help="Manually controls the speed of the camera’s shutter in microseconds (i.e. 1e6 us = 1s")
+ap.add_argument("-fps", "--framerate", default=30, type=int)
+ap.add_argument("-ss", "--shutter", default=15000, type=int, help="Manually controls the speed of the camera’s shutter in microseconds (i.e. 1e6 us = 1s")
 ap.add_argument("-v", "--verbose", dest="verbose", default=False, action="store_true")
 ap.add_argument("-t", "--timeout", default=5000, type=int, help="Control the timeout, in ms, that the video will be recorded")
 ap.add_argument("-cfx", "--colfx", default="128:128", help="""
@@ -67,6 +69,7 @@ ap.add_argument("-p", "--preview", dest="preview", nargs=4, help=
 )
 
 ap.add_argument("-e", "--emulate", dest="emulate", default=False, action="store_true", help="If passed, an emulator camera yielding random RGB images is run, instead of a Basler Camera. This is useful for debugging / testing purposes")
+ap.add_argument("-a", "--annotate", action="append", nargs="+", type=str, help="Enable/set annotate flags or text")
 
 args = ap.parse_args()
 
@@ -83,6 +86,15 @@ class BaslerVidClient:
         else:
             CameraClass = BaslerCamera
 
+        annotator = Annotator()
+        if args.annotate:
+            for v in args.annotate:
+                if isinstance(v, list):
+                    for vv in v:
+                        annotator._decompose_value(vv)
+                else:
+                    annotator._decompose_value(v)
+
         camera = CameraClass(
           # temporal resolution
           framerate=args.framerate,
@@ -96,7 +108,8 @@ class BaslerVidClient:
           # timeout
           timeout=args.timeout,
           # color scale of the camera
-          colfx=args.colfx
+          colfx=args.colfx,
+          annotator=annotator
         )
 
         self._camera = camera
@@ -114,11 +127,17 @@ class BaslerVidClient:
         tcp_client = TCPClient(host, int(port))
         tcp_client.daemon = True
         tcp_client.start()
-        self._camera.open()
 
-        for t_ms, frame in self._camera:
-            tcp_client.queue(frame)
-        tcp_client.stop()
+        try:
+            for t_ms, frame in self._camera:
+                tcp_client.queue(frame)
+
+        except KeyboardInterrupt:
+            pass
+
+        finally:
+            tcp_client.stop()
+
         return 0
 
     def save(self, path):
@@ -131,6 +150,7 @@ class BaslerVidClient:
 
         logger.debug("Piping data to stdout")
         encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
+        logging.basicConfig(level=logging.CRITICAL)
 
         for t_ms, frame in self._camera:
             result, imgencode = cv2.imencode('.jpg', frame, encode_param)
@@ -146,10 +166,16 @@ class BaslerVidClient:
         """
         logger.debug("Running preview of camera")
 
-        for t_ms, frame in self._camera:
-            cv2.imshow("preview", frame)
-            if cv2.waitKey(25) & 0xFF == ord('q'):
-                break
+
+        try:
+            for t_ms, frame in self._camera:
+                pass
+                #cv2.imshow("preview", frame)
+                #if cv2.waitKey(25) & 0xFF == ord('q'):
+                #    break
+
+        except KeyboardInterrupt:
+            return 0
 
         return 0
 
@@ -164,6 +190,8 @@ class BaslerVidClient:
         Run baslervid by following user's arguments
         """
         
+        self._camera.open()
+
         if args.output is None:
             self.preview()
         else:

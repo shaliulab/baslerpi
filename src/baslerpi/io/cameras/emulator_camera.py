@@ -1,4 +1,5 @@
 import logging
+import time
 
 import numpy as np
 
@@ -11,6 +12,7 @@ class EmulatorCamera(BaseCamera):
     A class to yield random RGB images
     """
     def open(self):
+        self._start_time = time.time()
         logger.debug("Opening emulator camera")
     def close(self):
         logger.debug("Closing emulator camera")

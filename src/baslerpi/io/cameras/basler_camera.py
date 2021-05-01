@@ -41,15 +41,18 @@ class BaslerCamera(BaseCamera):
         # TODO
         return False
 
-    def is_opened(self):
+    def is_open(self):
         """
         Return True if camera is opened
         """
         return self.camera.IsOpen()
 
     def configure(self):
-        self.framerate = self._framerate
-        self.exposuretime = self._exposuretime
+        self.exposuretime = self._target_exposuretime
+        self.camera.AcquisitionFrameRateEnable.SetValue(True)
+        time.sleep(1)
+        self.framerate = self._target_framerate
+        time.sleep(1)
         self._report()
 
     def open(self, maxframes=None, buffersize=5):
@@ -107,6 +110,10 @@ class BaslerCamera(BaseCamera):
             try:
                 grabResult = self.camera.RetrieveResult(self._timeout, pylon.TimeoutHandling_ThrowException)
                 status = grabResult.GrabSucceeded()
+
+            except KeyboardInterrupt:
+                return 0
+
             except Exception as error:
                 logger.error(error)
                 logger.warning(traceback.print_exc())
@@ -158,8 +165,8 @@ class BaslerCamera(BaseCamera):
         # TODO Return number of channels!
         return (self.camera.Height.GetValue(), self.camera.Width.GetValue(), 1)
 
+
     @property
-    @drive_basler
     def framerate(self):
         return self._framerate
 

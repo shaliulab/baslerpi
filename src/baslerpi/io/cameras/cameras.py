@@ -17,7 +17,8 @@ from baslerpi.utils import read_config_yaml
 class BaseCamera:
 
     def __init__(self, width=1280, height=960, drop_each=1, colfx="128:128", max_duration=None,
-        use_wall_clock=True, framerate=30, shutter=15000, iso=None, timeout=5000, wait_timeout=30000
+        use_wall_clock=True, framerate=30, shutter=15000, iso=None, timeout=5000, wait_timeout=30000,
+        annotator=None
     ):
         """
         The template class to generate and use video streams.
@@ -35,7 +36,7 @@ class BaseCamera:
         close()
         _load_message()
         _next_image()
-        is_opened()
+        is_open()
         is_last_frame()
 
         Derived classes can define
@@ -58,12 +59,20 @@ class BaseCamera:
         self._shape = (None, None)
         self._use_wall_clock = use_wall_clock
         self._start_time = None
-        self._framerate = framerate
-        self._exposuretime = shutter
+        self._target_framerate = framerate
+        self._computed_framerate = 0
+        self._framerate  = 0
+        self._target_exposuretime = shutter
+        self._exposuretime = 0
         self._drop_each = drop_each
         self._timeout = wait_timeout
         self._recording_timeout = timeout
+        self._annotator = annotator
+        self._count = 0
 
+    def annotate(self, frame):
+        frame = self._annotator.annotate(frame)
+        return frame
 
     def time_stamp(self):
         if self._start_time is None:
@@ -77,29 +86,15 @@ class BaseCamera:
         self.close()
 
     def __str__(self):
-        template = '%s running %s FPS, ET %s ms'
+        template = '%s: %s FPS, ET %s ms (target %s FPS, %s ms)'
         return template % (
             self.__class__.__name__,
             str(self._framerate).zfill(4),
-            str(self._exposuretime).zfill(8)
+            str(self._exposuretime).zfill(8),
+            str(self._target_framerate).zfill(4),
+            str(self._target_exposuretime).zfill(8),
         )
 
-    # def __getattr__(self, key):
-
-    #     if key in self._settings.keys():
-    #         return self._settings[key]
-    #     elif hasattr(self, key):
-    #         return getattr(self, key)
-    #     else:
-    #         logger.warning("Attribute %s not found", key)
-
-    # def __setattr__(self, key, value):
-    #     if key in self._settings.keys():
-    #         self._settings[key] = value
-    #     elif hasattr(self, key):
-    #         setattr(self, key, value)
-    #     else:
-    #         logger.warning("Attribute %s not found", key)
 
     def __iter__(self):
         """
@@ -109,12 +104,16 @@ class BaseCamera:
         :rtype: (int, :class:`~numpy.ndarray`)
         """
         at_least_one_frame = False
+        tick = 0
+
         while not self.stopped:
-            if self.is_last_frame() or not self.is_opened():
+            if self.is_last_frame() or not self.is_open():
                 if not at_least_one_frame:
                     raise Exception("Camera could not read the first frame")
                 break
             time_s, out = self._next_time_image()
+
+            out = self.annotate(out)
             if out is None:
                 break
             t_ms = int(1000 * time_s)
@@ -122,12 +121,21 @@ class BaseCamera:
 
             if (self._frame_idx % self._drop_each) == 0:
                 logger.debug("Yielding frame")
-                logger.debug("Time: %s, Framerate: %s", t_ms, self._framerate)
+                self._count += 1
+                if int(time_s) > tick:
+                    tick = int(time_s)
+                    self._computed_framerate = self._count
+                    logger.info(f"Computed framerate: {self._computed_framerate}")
+                    self._count = 0
                 yield t_ms, out
 
             if (self._recording_timeout is not None and self._recording_timeout != 0) and t_ms > self._recording_timeout:
                 logger.debug(f"Timeout ({self._recording_timeout}) ms reached. Terminating camera...")
                 break
+
+    @property
+    def computed_framerate(self):
+        return self._computed_framerate
 
     def _next_time_image(self):
         timestamp = self.time_stamp()
@@ -140,8 +148,8 @@ class BaseCamera:
         self._report()
 
     def _report(self):
-        print(f"Framerate = {self.framerate}")
-        print(f"Exposure time = {self.exposuretime}")
+        logger.debug(f"Actual framerate = {self.framerate}")
+        logger.debug(f"Acutal exposure time = {self.exposuretime}")
 
     def is_last_frame(self):
         raise NotImplementedError
@@ -149,7 +157,7 @@ class BaseCamera:
     def _next_image(self):
         raise NotImplementedError
 
-    def is_opened(self):
+    def is_open(self):
         raise NotImplementedError
 
     def open(self):
