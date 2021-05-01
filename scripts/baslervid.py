@@ -15,10 +15,13 @@ import cv2
 
 from baslerpi.utils import parse_protocol, read_config_yaml
 from baslerpi.io.cameras.basler_camera import BaslerCamera
+from baslerpi.io.cameras.emulator_camera import EmulatorCamera 
 from baslerpi.web_utils import TCPClient
 
 config = read_config_yaml("conf/logging.yaml")
 logging.config.dictConfig(config)
+
+logger = logging.getLogger(__name__)
 
 
 def range_limited_int_type(arg):
@@ -63,55 +66,115 @@ ap.add_argument("-p", "--preview", dest="preview", nargs=4, help=
     """
 )
 
+ap.add_argument("-e", "--emulate", dest="emulate", default=False, action="store_true", help="If passed, an emulator camera yielding random RGB images is run, instead of a Basler Camera. This is useful for debugging / testing purposes")
+
 args = ap.parse_args()
 
 if args.print_help:
   ap.print_help()
   sys.exit(0)
 
-camera = BaslerCamera(
-  # temporal resolution
-  framerate=args.framerate,
-  # spatial resolution
-  height=args.height,
-  width=args.width,
-  # shutter speed (exposure time)
-  shutter=args.shutter,
-  # ISO
-  iso = args.iso,
-  # timeout
-  timeout=args.timeout,
-  # color scale of the camera
-  colfx=args.colfx
-)
+class BaslerVidClient:
+
+    def __init__(self, args):
+
+        if args.emulate:
+            CameraClass = EmulatorCamera
+        else:
+            CameraClass = BaslerCamera
+
+        camera = CameraClass(
+          # temporal resolution
+          framerate=args.framerate,
+          # spatial resolution
+          height=args.height,
+          width=args.width,
+          # shutter speed (exposure time)
+          shutter=args.shutter,
+          # ISO
+          iso = args.iso,
+          # timeout
+          timeout=args.timeout,
+          # color scale of the camera
+          colfx=args.colfx
+        )
+
+        self._camera = camera
 
 
-if args.output is None:
-    pass
-    # just output on the screen
 
-else:
-    protocol = parse_protocol(args.output)
-    
-    if protocol is None:
-      if args.output == "-":
-        # std out
-        pass
-    
-      else:
-        # normal path to video
-        pass
-    else:
-        host, port = protocol[1].split(":")
+    def stream(self, url):
+        """
+        Stream data to tcp server in url
+        """
+
+        host, port = url[1].split(":")
+        logger.debug(f"Streaming data to {url}")
         # protocol
-        print(port)
-        print(host)
         tcp_client = TCPClient(host, int(port))
         tcp_client.daemon = True
         tcp_client.start()
+        self._camera.open()
 
-camera.open()
-for t_ms, frame in camera:
-    tcp_client.queue(frame)
-camera.close()
-tcp_client.stop()
+        for t_ms, frame in self._camera:
+            tcp_client.queue(frame)
+        tcp_client.stop()
+        return 0
+
+    def save(self, path):
+        pass
+
+    def pipe(self):
+        """
+        Pass obtained data to std output
+        """
+
+        logger.debug("Piping data to stdout")
+        encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
+
+        for t_ms, frame in self._camera:
+            result, imgencode = cv2.imencode('.jpg', frame, encode_param)
+            data = np.array(imgencode)
+            binary_data = data.tostring()
+            sys.stdout.buffer.write(binary_data)
+
+        return 0
+
+    def preview(self):
+        """
+        Preview data in a pop up window live
+        """
+        logger.debug("Running preview of camera")
+
+        for t_ms, frame in self._camera:
+            cv2.imshow("preview", frame)
+            if cv2.waitKey(25) & 0xFF == ord('q'):
+                break
+
+        return 0
+
+    def close(self):
+        logger.debug("Closing baslervid")
+        camera.close()
+        return 0
+
+
+    def run(self, args):
+        """
+        Run baslervid by following user's arguments
+        """
+        
+        if args.output is None:
+            self.preview()
+        else:
+            url = parse_protocol(args.output)
+            if url is None:
+                if args.output == "-":
+                    self.pipe()
+                else:
+                    self.save(args.output)
+            else:
+                self.stream(url)
+
+baslervid = BaslerVidClient(args)
+baslervid.run(args)

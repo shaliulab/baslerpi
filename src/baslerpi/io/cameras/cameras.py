@@ -49,6 +49,9 @@ class BaseCamera:
         :param kwargs: additional keyword arguments
         """
 
+        self._width = width
+        self._height = height 
+
         self._max_duration = max_duration
         self.stopped = False
         self._frame_idx = 0
@@ -77,8 +80,8 @@ class BaseCamera:
         template = '%s running %s FPS, ET %s ms'
         return template % (
             self.__class__.__name__,
-            str(self.framerate).zfill(4),
-            str(self.exposuretime).zfill(8)
+            str(self._framerate).zfill(4),
+            str(self._exposuretime).zfill(8)
         )
 
     # def __getattr__(self, key):
@@ -119,7 +122,7 @@ class BaseCamera:
 
             if (self._frame_idx % self._drop_each) == 0:
                 logger.debug("Yielding frame")
-                logger.debug("Time: %s, Framerate: %s", t_ms, self.framerate)
+                logger.debug("Time: %s, Framerate: %s", t_ms, self._framerate)
                 yield t_ms, out
 
             if (self._recording_timeout is not None and self._recording_timeout != 0) and t_ms > self._recording_timeout:
