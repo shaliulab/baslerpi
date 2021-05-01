@@ -12,19 +12,20 @@ import numpy as np
 from baslerpi.web_utils import TCPServer
 from baslerpi.utils import read_config_yaml
 
-config = read_config_yaml("conf/logging.yaml")
-logging.config.dictConfig(config)
-logger = logging.getLogger(__name__)
 
-ap = argparse.ArgumentParser()
-ap.add_argument("--host", default="0.0.0.0")
-ap.add_argument("--port",   type=int, default=8084)
-ap.add_argument("--width",  type=int, default=200)
-ap.add_argument("--height", type=int, default=260)
-args = ap.parse_args()
+def main():
 
+    config = read_config_yaml("conf/logging.yaml")
+    logging.config.dictConfig(config)
+    logger = logging.getLogger(__name__)
+    
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--host", default="0.0.0.0")
+    ap.add_argument("--port",   type=int, default=8084)
+    ap.add_argument("--width",  type=int, default=200)
+    ap.add_argument("--height", type=int, default=260)
+    args = ap.parse_args()
 
-if __name__ == "__main__":
 
     tcp_server = TCPServer(args.host, args.port)
     tcp_server.daemon = True
@@ -53,3 +54,6 @@ if __name__ == "__main__":
 
     sys.exit(0)
 
+
+if __name__ == "__main__":
+    main()
