@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class TCPClient(threading.Thread):
 
-    _num_conns = 3
+    _num_conns = 1
     _CHUNK_SIZE = 1024*10
     #_num_conns = 1
 
@@ -72,7 +72,7 @@ class TCPClient(threading.Thread):
             sock.setblocking(False)
             sock.connect_ex(server_addr)
             events = selectors.EVENT_READ | selectors.EVENT_WRITE
-            print(len(messages[0]))
+            #print(len(messages[0]))
             data = types.SimpleNamespace(
                     connid=connid,
                     #msg_total=sum(len(m) for m in messages),
@@ -184,7 +184,7 @@ class TCPClient(threading.Thread):
                     #print("Selector map is negative")
                     #print(selector_map)
                     ##break
-                    print("I am fetching more messages")
+                    #print("I am fetching more messages")
                     messages = self.get_messages()
                     self.start_connections(self._ip, self._port, messages, self._num_conns)
                 else:
