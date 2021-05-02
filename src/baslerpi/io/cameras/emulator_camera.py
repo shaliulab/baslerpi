@@ -21,11 +21,11 @@ class EmulatorCamera(BaseCamera):
         pass
 
     def _next_image(self):
-
+        logger.debug("Generating new frame")
         frame = np.random.randint(0, 255, (self._height, self._width))
         return frame
 
-    def is_opened(self):
+    def is_open(self):
         return True
 
     def is_last_frame(self):

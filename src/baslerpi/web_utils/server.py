@@ -71,7 +71,7 @@ class TCPServer(threading.Thread):
     def dequeue(self):
         success = False
         try:
-            frame = self._queue.get(block=False)
+            frame = self._queue.get(block=True)
             logger.debug("Dequed a received frame")
             success = True
         except queue.Empty:

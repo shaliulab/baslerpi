@@ -71,7 +71,8 @@ class BaseCamera:
         self._count = 0
 
     def annotate(self, frame):
-        frame = self._annotator.annotate(frame)
+        if self._annotator:
+            frame = self._annotator.annotate(frame)
         return frame
 
     def time_stamp(self):
