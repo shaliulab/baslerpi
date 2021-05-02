@@ -66,11 +66,13 @@ def main():
     try:
         while True:
             success, frame = tcp_server.dequeue()
+            print(success)
             if success:
                 if args.preview:
                     preview(frame)
                 if args.save:
                     save(frame)
+                print(frame.shape)
 
     except KeyboardInterrupt:
         tcp_server.stop()

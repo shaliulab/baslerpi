@@ -7,7 +7,7 @@ Key flags should have a behavior identical to raspivid
 import argparse
 import sys
 import math
-import re
+import time
 import logging
 import logging.config
 
@@ -139,14 +139,23 @@ class BaslerVidClient:
         tcp_client.start()
 
         try:
+            last_tick = time.time()
             for t_ms, frame in self._camera:
                 tcp_client.queue(frame)
+                if t_ms - last_tick > 1000:
+                    last_tick = time.time()
+                    logger.info(f"Computed TCP Client framerate: {self._count}")
+                    tcp_client._count = 0
+                if tcp_client._stop.is_set():
+                    print("TCP Client has stopped. Exiting...")
+                    break
 
         except KeyboardInterrupt:
             pass
 
         finally:
             tcp_client.stop()
+            self._camera.close()
 
         return 0
 

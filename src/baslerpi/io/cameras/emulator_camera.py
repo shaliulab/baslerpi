@@ -24,6 +24,9 @@ class EmulatorCamera(BaseCamera):
     def is_open(self):
         return True
 
+    def _next_image(self):
+        time.sleep(1/self._target_framerate)
+
     def is_last_frame(self):
         return False
 
@@ -31,6 +34,7 @@ class RandomCamera(EmulatorCamera):
 
     def _next_image(self):
         logger.debug("Generating new frame")
+        super()._next_image()
         frame = np.random.randint(0, 255, (self._height, self._width))
         return frame
 
@@ -43,6 +47,7 @@ class DeterministicCamera(EmulatorCamera):
 
     def _next_image(self):
         logger.debug("Generating new frame")
+        super()._next_image()
         return self._frame
 
 

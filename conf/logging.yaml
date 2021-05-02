@@ -20,15 +20,19 @@ handlers:
     stream: ext://sys.stdout
 
 loggers:
+  main:
+    level: INFO
+    handlers: [console]
   baslerpi:
     level: WARNING
-    propage: yes
+    propagate: yes
   baslerpi.io.cameras.cameras:
     handlers: [console]
     level: INFO
     propagate: no
   baslerpi.web_utils:
     handlers: [console]
+    level: INFO
     propagate: no
   baslerpi.processing.annotate:
     handlers: [console]
