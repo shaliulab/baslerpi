@@ -16,7 +16,7 @@ import numpy as np
 
 from baslerpi.utils import parse_protocol, read_config_yaml
 from baslerpi.io.cameras.basler_camera import BaslerCamera
-from baslerpi.io.cameras.emulator_camera import EmulatorCamera 
+from baslerpi.io.cameras.emulator_camera import RandomCamera, DeterministicCamera
 from baslerpi.web_utils import TCPClient
 from baslerpi.processing.annotate import Annotator
 
@@ -68,7 +68,13 @@ ap.add_argument("-p", "--preview", dest="preview", nargs=4, help=
     """
 )
 
-ap.add_argument("-e", "--emulate", dest="emulate", default=False, action="store_true", help="If passed, an emulator camera yielding random RGB images is run, instead of a Basler Camera. This is useful for debugging / testing purposes")
+ap.add_argument("-e", "--emulate", default=None, help=
+        """
+        If passed and set to random, an emulator camera yielding random RGB images is run, instead of a Basler Camera.
+        If passed and set to deterministic, the same random frame is always passed.
+        If not passed at all, a basler camera is used.
+        This is useful for debugging / testing purposes.
+        """)
 ap.add_argument("-a", "--annotate", action="append", nargs="+", type=str, help="Enable/set annotate flags or text")
 
 args = ap.parse_args()
@@ -81,10 +87,14 @@ class BaslerVidClient:
 
     def __init__(self, args):
 
-        if args.emulate:
-            CameraClass = EmulatorCamera
-        else:
+        if args.emulate is None:
             CameraClass = BaslerCamera
+        elif args.emulate == "random":
+            CameraClass = RandomCamera
+        elif args.emulate == "deterministic":
+            CameraClass = DeterministicCamera
+        else:
+            logger.error("Please emulate with random or deterministic camera")
 
         annotator = Annotator()
         if args.annotate:

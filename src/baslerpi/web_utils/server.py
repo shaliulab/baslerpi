@@ -66,6 +66,7 @@ class TCPServer(threading.Thread):
             return False, None
         decimg = cv2.imdecode(data, 1)
         logger.debug("Received frame was decoded successfully")
+        conn.close()
         return True, decimg
 
     def dequeue(self):

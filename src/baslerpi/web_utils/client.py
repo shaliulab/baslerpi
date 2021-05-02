@@ -17,14 +17,14 @@ class TCPClient(threading.Thread):
         self._encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
         self._queue = queue.Queue(maxsize=1)
         self._stop = threading.Event()
-        self.connect()
         super().__init__(*args, **kwargs)
 
 
     def connect(self):
         logger.debug("Opening socket")
-        self._sock = socket.socket()
-        self._sock.connect((self._ip, self._port))
+        self._sock = socket.create_connection((self._ip, self._port))
+        #self._sock = socket.socket()
+        #self._sock.connect((self._ip, self._port))
 
     def queue(self, frame):
         logger.debug("Queuing frame in TCP client")
@@ -32,17 +32,20 @@ class TCPClient(threading.Thread):
 
     def stream(self, frame):
         result, imgencode = cv2.imencode('.jpg', frame, self._encode_param)
-        data = np.array(imgencode)
+        #data = np.array(imgencode)
+        data = imgencode 
         stringData = data.tostring()
-        send1 = str(len(stringData)).ljust(16)
+        header = str(len(stringData)).ljust(16)
         logger.debug("Sending frame to TCP server")
         try:
-            self._sock.send(send1.encode("utf-8"));
-            self._sock.send(stringData);
-        except (ConnectionResetError, BrokenPipeError) as error:
-            logger.warning(error)
-            self.close()
             self.connect()
+        except ConnectionRefusedError as error:
+            logger.warning("Connection refused")
+            return None
+
+        self._sock.send(header.encode("utf-8"));
+        self._sock.send(stringData);
+        self.close()
         return data
 
     def run(self):
@@ -51,8 +54,6 @@ class TCPClient(threading.Thread):
             frame = self._queue.get()
             data = self.stream(frame)
             #decimg=cv2.imdecode(data,1)
-        self.close()
-
 
     def close(self):
         logger.debug("Closing socket")

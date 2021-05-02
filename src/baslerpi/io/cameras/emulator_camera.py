@@ -11,6 +11,7 @@ class EmulatorCamera(BaseCamera):
     """
     A class to yield random RGB images
     """
+
     def open(self):
         self._start_time = time.time()
         logger.debug("Opening emulator camera")
@@ -20,14 +21,31 @@ class EmulatorCamera(BaseCamera):
     def _load_message(self):
         pass
 
-    def _next_image(self):
-        logger.debug("Generating new frame")
-        frame = np.random.randint(0, 255, (self._height, self._width))
-        return frame
-
     def is_open(self):
         return True
 
     def is_last_frame(self):
         return False
+
+class RandomCamera(EmulatorCamera):
+
+    def _next_image(self):
+        logger.debug("Generating new frame")
+        frame = np.random.randint(0, 255, (self._height, self._width))
+        return frame
+
+class DeterministicCamera(EmulatorCamera):
+    
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._frame = np.random.randint(0, 255, (self._height, self._width))
+
+    def _next_image(self):
+        logger.debug("Generating new frame")
+        return self._frame
+
+
+
+
 

@@ -1,3 +1,5 @@
+#! /usr/bin/python
+
 import argparse
 import sys
 import logging
@@ -44,7 +46,7 @@ def main():
     logger = logging.getLogger(__name__)
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--host", default="0.0.0.0")
+    ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port",   type=int, default=8084)
     ap.add_argument("--no-preview", action="store_false", dest="preview", default=False)
     ap.add_argument("--save", action="store_true", dest="save", default=False)
