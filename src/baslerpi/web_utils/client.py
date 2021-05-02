@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 class TCPClient(threading.Thread):
 
-    _num_conns = 1
+    _num_conns = 3
+    _CHUNK_SIZE = 1024*10
+    #_num_conns = 1
 
     def __init__(self, ip, port, *args, parallel = True, **kwargs):
         self._ip = ip
@@ -65,14 +67,16 @@ class TCPClient(threading.Thread):
         server_addr = (host, port)
         for i in range(0, num_conns):
             connid = i + 1
-            print("Starting connection ", connid, " to ", server_addr)
+            logger.debug("connection (%s) OPEN", connid)
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setblocking(False)
             sock.connect_ex(server_addr)
             events = selectors.EVENT_READ | selectors.EVENT_WRITE
+            print(len(messages[0]))
             data = types.SimpleNamespace(
                     connid=connid,
-                    msg_total=sum(len(m) for m in messages),
+                    #msg_total=sum(len(m) for m in messages),
+                    msg_total=len(messages[i]),
                     recv_total = 0,
                     messages=messages,
                     outb=b'')
@@ -83,10 +87,15 @@ class TCPClient(threading.Thread):
         
         sock = key.fileobj
         data = key.data
+        #print("--")
+        #print(mask & selectors.EVENT_READ)
+        #print(mask)
+        #print(selectors.EVENT_READ)
+        #print("--")
 
         if mask & selectors.EVENT_READ:
             try:
-                recv_data = sock.recv(1024)
+                recv_data = sock.recv(self._CHUNK_SIZE)
             except Exception as error:
                 logger.warning(error)
                 logger.warning("Could not receive confirmation from server")
@@ -96,22 +105,47 @@ class TCPClient(threading.Thread):
                 data.recv_total += len(recv_data)
                 logger.debug("Serving read connection to %s", sock.getpeername()[1])
                 logger.debug("Length of received data %s", len(recv_data))
+                logger.debug("Length of missing data %s", data.msg_total - data.recv_total)
 
             if not recv_data or data.recv_total == data.msg_total:
-                print("Closing connection ", data.connid)
+                logger.debug("connection (%s) CLOSE", data.connid)
+                #if not recv_data:
+                #    print("No more data is received")
+                #if data.recv_total == data.msg_total:
+                #    print("Received amount of data is the expected")
+
                 self._selector.unregister(sock)
                 sock.close()
 
+            #else:
+            #    if recv_data:
+            #        print("I am still receiving data")
+            #        print(recv_data)
+            #    if data.recv_total != data.msg_total:
+            #        print("I still have not received everything back")
+            #        print(data.recv_total)
+            #        print(data.msg_total)
+
         if mask & selectors.EVENT_WRITE:
         
+            #print("Messages left")
+            #print(len(data.messages))
+            #print(sock._closed)
             if not data.outb and data.messages:
                 data.outb = data.messages.pop(0)
 
             if len(data.outb) != 0:
-                print("Sending to connection", data.connid)
-                sent = sock.send(data.outb)
-                logger.debug("Length of sent data %s", len(data.outb))
+                logger.debug("Sending to connection %d", data.connid)
+                try:
+                    sent = sock.send(data.outb)
+                except Exception:
+                    # TODO Exit at some point, dont keep trying
+                    print("Server is closed")
+                    sock.close()
+                    return 1
+                logger.debug("Length of sent data %s", sent)
                 data.outb = data.outb[sent:]
+                logger.debug("Length of remaining data %s", len(data.outb))
 
                 if len(data.outb) == 0:
                     self._count += 1
@@ -120,7 +154,6 @@ class TCPClient(threading.Thread):
     def get_messages(self):
         messages = [self._queue.get(timeout=2) for i in range(self._num_conns)]
         for i, msg in enumerate(messages):
-            print(msg.shape)
             messages[i] = self.encode(msg)
         return messages
 
@@ -136,6 +169,8 @@ class TCPClient(threading.Thread):
         try:
             while not self._stop.is_set():
                 loop += 1
+                #if loop == 9999:
+                #    break
                 events = self._selector.select(timeout=1)
                 if events:
                     for key, mask in events:
@@ -148,14 +183,14 @@ class TCPClient(threading.Thread):
                 if not selector_map:
                     #print("Selector map is negative")
                     #print(selector_map)
-                    #break
+                    ##break
+                    print("I am fetching more messages")
                     messages = self.get_messages()
                     self.start_connections(self._ip, self._port, messages, self._num_conns)
                 else:
                     pass
                     #print("Selector map is positive")
                     #print(selector_map)
-                
         except KeyboardInterrupt:
             pass
         finally:

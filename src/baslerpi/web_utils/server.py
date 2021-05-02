@@ -19,6 +19,7 @@ class TCPServer(threading.Thread):
     """
 
     _TICK_PERIOD = 1000
+    _CHUNK_SIZE = 1024*10
 
     def __init__(self, ip, port, *args, parallel=True, **kwargs):
 
@@ -75,23 +76,28 @@ class TCPServer(threading.Thread):
         data = key.data
         # the socket is ready to read
         if mask & selectors.EVENT_READ:
-            recv_data = sock.recv(1024)
-            if recv_data:
-                logger.debug("Serving read connection from %s", data.addr)
-                data.outb += recv_data
-                logger.debug("Length of received data %d", len(data.outb))
- 
-            else:
-                print("connection CLOSE ", data.addr)
-                self._selector.unregister(sock)
-                img = self.decode(data.outb)
-                if img is None:
-                    pass
+            try:
+                recv_data = sock.recv(self._CHUNK_SIZE)
+                if recv_data:
+                    logger.debug("Serving read connection from %s", data.addr)
+                    data.outb += recv_data
+                    logger.debug("Length of received data %d", len(data.outb))
+     
                 else:
-                    self._queue.put(img)
-                    self.count += 1
+                    print("connection CLOSE ", data.addr)
+                    self._selector.unregister(sock)
+                    img = self.decode(data.outb)
+                    if img is None:
+                        pass
+                    else:
+                        self._queue.put(img)
 
+                    sock.close()
+    
+            except ConnectionResetError:
+                print("Client is closed")
                 sock.close()
+
 
         if mask & selectors.EVENT_WRITE:
             if data.outb:
@@ -102,11 +108,13 @@ class TCPServer(threading.Thread):
                     original_length = len(data.outb)
                     sent = sock.send(data.outb)
                     data.outb = data.outb[sent:]
+                    logger.debug("Length of sent data %s", sent)
                     if len(data.outb) == 0 and sent == original_length:
                         logger.debug("Success in echoing")
                 except Exception as error:
                     logger.warning(error)
                     logger.warning("Could not echo data back to client")
+                    raise error
                     
 
     def _run_multi_threaded(self):

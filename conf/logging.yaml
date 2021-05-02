@@ -20,9 +20,6 @@ handlers:
     stream: ext://sys.stdout
 
 loggers:
-  main:
-    level: INFO
-    handlers: [console]
   baslerpi:
     level: WARNING
     propagate: yes
@@ -34,9 +31,20 @@ loggers:
     handlers: [console]
     level: INFO
     propagate: no
+  baslerpi.web_utils.client:
+    handlers: [console]
+    level: INFO 
+    propagate: no
+  baslerpi.web_utils.server:
+    handlers: [console]
+    level: DEBUG
+    propagate: no
   baslerpi.processing.annotate:
     handlers: [console]
     propagate: no
+  __main__:
+    level: INFO
+    handlers: [console]
 
 
 root:

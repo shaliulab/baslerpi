@@ -139,12 +139,12 @@ class BaslerVidClient:
         tcp_client.start()
 
         try:
-            last_tick = time.time()
+            last_tick = 0
             for t_ms, frame in self._camera:
                 tcp_client.queue(frame)
-                if t_ms - last_tick > 1000:
-                    last_tick = time.time()
-                    logger.info(f"Computed TCP Client framerate: {self._count}")
+                if (t_ms - last_tick) > 1000:
+                    last_tick = t_ms
+                    logger.info(f"Computed TCP Client framerate: {tcp_client._count}")
                     tcp_client._count = 0
                 if tcp_client._stop.is_set():
                     print("TCP Client has stopped. Exiting...")
