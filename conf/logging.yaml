@@ -35,6 +35,10 @@ loggers:
     handlers: [console]
     level: INFO 
     propagate: no
+  baslerpi.web_utils.client.encoding:
+    handlers: [console]
+    level: DEBUG 
+    propagate: no
   baslerpi.web_utils.server:
     handlers: [console]
     level: DEBUG

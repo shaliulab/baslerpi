@@ -10,6 +10,8 @@ import cv2
 import numpy as np
 
 logger = logging.getLogger(__name__)
+networking_logger = logging.getLogger(__name__ + ".networking")
+encoding_logger = logging.getLogger(__name__ + ".encoding")
 
 class TCPClient(threading.Thread):
 
@@ -34,7 +36,11 @@ class TCPClient(threading.Thread):
         self._queue.put(frame)
 
     def encode(self, frame):
+        bef = time.time()
         result, imgencode = cv2.imencode('.jpg', frame, self._encode_param)
+        aft = time.time()
+        encoding_logger.debug(f"Elapsed time encoding frame: {aft-bef}")
+ 
         data = np.array(imgencode)
         stringData = data.tostring()
         return stringData
@@ -87,15 +93,14 @@ class TCPClient(threading.Thread):
         
         sock = key.fileobj
         data = key.data
-        #print("--")
-        #print(mask & selectors.EVENT_READ)
-        #print(mask)
-        #print(selectors.EVENT_READ)
-        #print("--")
 
         if mask & selectors.EVENT_READ:
             try:
+                bef = time.time()
                 recv_data = sock.recv(self._CHUNK_SIZE)
+                aft = time.time()
+                networking_logger.debug(f"Elapsed time receiving recv_data: {aft-bef}")
+ 
             except Exception as error:
                 logger.warning(error)
                 logger.warning("Could not receive confirmation from server")
@@ -103,42 +108,43 @@ class TCPClient(threading.Thread):
 
             if recv_data:
                 data.recv_total += len(recv_data)
-                logger.debug("Serving read connection to %s", sock.getpeername()[1])
-                logger.debug("Length of received data %s", len(recv_data))
-                logger.debug("Length of missing data %s", data.msg_total - data.recv_total)
+                networking_logger.debug("Serving read connection to %s", sock.getpeername()[1])
+                networking_logger.debug("Length of received data %s", len(recv_data))
+                networking_logger.debug("Length of missing data %s", data.msg_total - data.recv_total)
 
             if not recv_data or data.recv_total == data.msg_total:
                 logger.debug("connection (%s) CLOSE", data.connid)
-                #if not recv_data:
-                #    print("No more data is received")
-                #if data.recv_total == data.msg_total:
-                #    print("Received amount of data is the expected")
+                if not recv_data:
+                    networking_logger.debug("No more data is received")
+                if data.recv_total == data.msg_total:
+                    networking_logger.debug("Received amount of data is the expected")
 
                 self._selector.unregister(sock)
                 sock.close()
 
-            #else:
-            #    if recv_data:
-            #        print("I am still receiving data")
-            #        print(recv_data)
-            #    if data.recv_total != data.msg_total:
-            #        print("I still have not received everything back")
-            #        print(data.recv_total)
-            #        print(data.msg_total)
+            else:
+                if recv_data:
+                    networking_logger.debug("I am still receiving data")
+                    networking_logger.debug(recv_data)
+                if data.recv_total != data.msg_total:
+                    networking_logger.debug("I still have not received everything back")
+                    networking_logger.debug(data.recv_total)
+                    networking_logger.debug(data.msg_total)
 
         if mask & selectors.EVENT_WRITE:
         
-            #print("Messages left")
-            #print(len(data.messages))
-            #print(sock._closed)
             if not data.outb and data.messages:
                 data.outb = data.messages.pop(0)
 
             if len(data.outb) != 0:
                 logger.debug("Sending to connection %d", data.connid)
                 try:
+                    bef = time.time()
                     sent = sock.send(data.outb)
-                except Exception:
+                    aft = time.time()
+                    networking_logger.debug(f"Elapsed time sending data.outb: {aft-bef}")
+                except Exception as error:
+                    logger.warning(error)
                     # TODO Exit at some point, dont keep trying
                     print("Server is closed")
                     sock.close()
