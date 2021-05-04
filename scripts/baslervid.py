@@ -191,15 +191,13 @@ class BaslerVidClient:
         """
         Preview data in a pop up window live
         """
+        import cv2
         logger.debug("Running preview of camera")
-
-
         try:
             for t_ms, frame in self._camera:
-                pass
-                #cv2.imshow("preview", frame)
-                #if cv2.waitKey(25) & 0xFF == ord('q'):
-                #    break
+                cv2.imshow("preview", frame)
+                if cv2.waitKey(25) & 0xFF == ord('q'):
+                    break
 
         except KeyboardInterrupt:
             return 0
