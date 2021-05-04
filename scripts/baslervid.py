@@ -191,8 +191,15 @@ class BaslerVidClient:
         """
         import cv2
         logger.debug("Running preview of camera")
+        manager = multiprocessing.Manager()
+        out_q = manager.Queue(maxsize=1)
+
+        self.fetcher_process = multiprocessing.Process(target=self.get_frames, args=(out_q, self._CameraClass), kwargs=self._camera_kwargs)
+        self.fetcher_process.start()
+
         try:
-            for t_ms, frame in self._camera:
+            while True:
+                t_ms, frame = out_q.get()
                 cv2.imshow("preview", frame)
                 if cv2.waitKey(25) & 0xFF == ord('q'):
                     break
