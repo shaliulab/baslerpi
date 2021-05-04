@@ -11,19 +11,24 @@ import time
 import logging
 import logging.config
 
-import cv2
 import numpy as np
 
 from baslerpi.utils import parse_protocol, read_config_yaml
 from baslerpi.io.cameras.basler_camera import BaslerCamera
 from baslerpi.io.cameras.emulator_camera import RandomCamera, DeterministicCamera
-from baslerpi.web_utils import TCPClient
-from baslerpi.processing.annotate import Annotator
 
 config = read_config_yaml("conf/logging.yaml")
 logging.config.dictConfig(config)
 
 logger = logging.getLogger(__name__)
+
+
+try:
+    from baslerpi.processing.annotate import Annotator
+    ANNOTATOR_AVAILABLE = True
+except ModuleNotFoundError:
+    logger.warning("Could not find cv2 module installation")
+    ANNOTATOR_AVAILABLE = False
 
 
 def range_limited_int_type(arg):
@@ -95,33 +100,35 @@ class BaslerVidClient:
             CameraClass = DeterministicCamera
         else:
             logger.error("Please emulate with random or deterministic camera")
+        
+        camera_kwargs = {
+            # temporal resolution
+            "framerate": args.framerate,
+            # spatial resolution
+            "height": args.height,
+            "width": args.width,
+            # shutter speed (exposure time)
+            "shutter": args.shutter,
+            # ISO
+            "iso": args.iso,
+            "timeout": args.timeout,
+            # color scale of the camera
+            "colfx": args.colfx
+        }
 
-        annotator = Annotator()
-        if args.annotate:
-            for v in args.annotate:
-                if isinstance(v, list):
-                    for vv in v:
-                        annotator._decompose_value(vv)
-                else:
-                    annotator._decompose_value(v)
+        if ANNOTATOR_AVAILABLE:
+            annotator = Annotator()
+            if args.annotate:
+                for v in args.annotate:
+                    if isinstance(v, list):
+                        for vv in v:
+                            annotator._decompose_value(vv)
+                    else:
+                        annotator._decompose_value(v)
 
-        camera = CameraClass(
-          # temporal resolution
-          framerate=args.framerate,
-          # spatial resolution
-          height=args.height,
-          width=args.width,
-          # shutter speed (exposure time)
-          shutter=args.shutter,
-          # ISO
-          iso = args.iso,
-          # timeout
-          timeout=args.timeout,
-          # color scale of the camera
-          colfx=args.colfx,
-          annotator=annotator
-        )
+            camera_kwargs["annotator"] = annotator
 
+        camera = CameraClass(**camera_kwargs)
         self._camera = camera
 
 
@@ -130,10 +137,10 @@ class BaslerVidClient:
         """
         Stream data to tcp server in url
         """
+        from baslerpi.web_utils import TCPClient
 
         host, port = url[1].split(":")
         logger.debug(f"Streaming data to {url}")
-        # protocol
         tcp_client = TCPClient(host, int(port))
         tcp_client.daemon = True
         tcp_client.start()
@@ -168,6 +175,7 @@ class BaslerVidClient:
         """
 
         logger.debug("Piping data to stdout")
+        import cv2
         encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
         logging.basicConfig(level=logging.CRITICAL)
 

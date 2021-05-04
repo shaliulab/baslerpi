@@ -7,7 +7,6 @@ import traceback
 
 # Optional modules
 from pypylon import pylon
-import cv2
 
 # Local library
 from baslerpi.decorators import drive_basler
