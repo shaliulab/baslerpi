@@ -12,7 +12,7 @@ from PIL import Image
 import numpy as np
 
 
-from baslerpi.web_utils import TCPServer
+from baslerpi.web_utils.server import TCPServer
 from baslerpi.utils import read_config_yaml
 
 

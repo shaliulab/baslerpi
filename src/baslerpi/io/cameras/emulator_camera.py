@@ -35,7 +35,7 @@ class RandomCamera(EmulatorCamera):
     def _next_image(self):
         logger.debug("Generating new frame")
         super()._next_image()
-        frame = np.random.randint(0, 255, (self._height, self._width))
+        frame = np.random.randint(0, 255, (self._height, self._width), dtype=np.uint8)
         return frame
 
 class DeterministicCamera(EmulatorCamera):
@@ -43,7 +43,7 @@ class DeterministicCamera(EmulatorCamera):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._frame = np.random.randint(0, 255, (self._height, self._width))
+        self._frame = np.random.randint(0, 255, (self._height, self._width), dtype=np.uint8)
 
     def _next_image(self):
         logger.debug("Generating new frame")

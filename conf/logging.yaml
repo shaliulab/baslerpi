@@ -33,11 +33,16 @@ loggers:
     propagate: no
   baslerpi.web_utils.client:
     handlers: [console]
-    level: INFO 
+    level: INFO
     propagate: no
+  baslerpi.web_utils.client.networking:
+    handlers: [console]
+    level: INFO
+    propagate: no
+
   baslerpi.web_utils.client.encoding:
     handlers: [console]
-    level: DEBUG 
+    level: INFO 
     propagate: no
   baslerpi.web_utils.server:
     handlers: [console]

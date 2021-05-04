@@ -10,6 +10,7 @@ import math
 import time
 import logging
 import logging.config
+import multiprocessing
 
 import numpy as np
 
@@ -128,42 +129,39 @@ class BaslerVidClient:
 
             camera_kwargs["annotator"] = annotator
 
-        camera = CameraClass(**camera_kwargs)
-        self._camera = camera
+        self._CameraClass = CameraClass
+        self._camera_kwargs = camera_kwargs
 
 
-
-    def stream(self, url):
+    def stream(self, url, in_q):
         """
         Stream data to tcp server in url
         """
-        from baslerpi.web_utils import TCPClient
+        from baslerpi.web_utils.client import TCPClient, FastTCPClient
+        import multiprocessing
+
+        TCPClientClass = FastTCPClient
 
         host, port = url[1].split(":")
         logger.debug(f"Streaming data to {url}")
-        tcp_client = TCPClient(host, int(port))
-        tcp_client.daemon = True
-        tcp_client.start()
+        #in_q=multiprocessing.Queue(maxsize=1)
+        #out_q=multiprocessing.Queue(maxsize=1)
+        #tcp_client = TCPClientClass(in_q, out_q, host, int(port))
+        self.tcp_client = TCPClientClass(in_q, host, int(port))
+        self.tcp_client.daemon = True
+        self.tcp_client.start()
 
-        try:
-            last_tick = 0
-            for t_ms, frame in self._camera:
-                tcp_client.queue(frame)
-                if (t_ms - last_tick) > 1000:
-                    last_tick = t_ms
-                    logger.info(f"Computed TCP Client framerate: {tcp_client._count}")
-                    tcp_client._count = 0
-                if tcp_client._stop.is_set():
-                    print("TCP Client has stopped. Exiting...")
-                    break
 
-        except KeyboardInterrupt:
-            pass
+    def get_frames(self, out_q, CameraClass, **camera_kwargs):
 
-        finally:
-            tcp_client.stop()
-            self._camera.close()
+        camera = CameraClass(**camera_kwargs)
+        camera.open()
 
+        last_tick = 0
+        for t_ms, frame in camera:
+            out_q.put((t_ms, frame))
+
+        camera.close()
         return 0
 
     def save(self, path):
@@ -215,7 +213,6 @@ class BaslerVidClient:
         Run baslervid by following user's arguments
         """
         
-        self._camera.open()
 
         if args.output is None:
             self.preview()
@@ -227,7 +224,19 @@ class BaslerVidClient:
                 else:
                     self.save(args.output)
             else:
-                self.stream(url)
+                manager = multiprocessing.Manager()
+                out_q = manager.Queue(maxsize=1)
+                self.fetcher_process = multiprocessing.Process(target=self.get_frames, args=(out_q, self._CameraClass), kwargs=self._camera_kwargs)
+                self.fetcher_process.start()
+
+                try:
+                    self.stream(url, in_q=out_q)
+                except KeyboardInterrupt:
+                    pass
+                finally:
+                    pass
+
+
 
 baslervid = BaslerVidClient(args)
 baslervid.run(args)
