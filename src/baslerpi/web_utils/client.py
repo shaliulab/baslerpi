@@ -326,7 +326,7 @@ class FastTCPClient(TCPClient):
         #logger.info(f"{current_process}: Starting...")
 
     def run(self):
-        processes=6
+        processes=8
         args = (self.in_q, self.out_q, self._ip, self._port,self.stream,  self.encode, self._ENCODE_PARAM)
         
         #processes_dict={}
@@ -335,6 +335,10 @@ class FastTCPClient(TCPClient):
         #    p=multiprocessing.Process(target=self.dummy, args=args)
         #    p.start()
         #    processes_dict[i]=p
+        frames_available = self.in_q.qsize()
+        while frames_available == 0:
+            time.sleep(1)
+            frames_available = self.in_q.qsize()
 
         with multiprocessing.Pool(processes=processes) as pool:
            #workers = pool.apply(self.parallel_encoding, args)
