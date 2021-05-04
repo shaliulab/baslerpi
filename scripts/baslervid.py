@@ -158,7 +158,16 @@ class BaslerVidClient:
         camera.open()
 
         last_tick = 0
+        count = 0
         for t_ms, frame in camera:
+            if t_ms > (last_tick + 1000):
+                last_tick = t_ms
+                print(f"Framerate: {count}")
+                count = 0
+            else:
+                count += 1
+                
+            print(out_q.qsize())
             out_q.put((t_ms, frame))
 
         camera.close()
@@ -200,7 +209,7 @@ class BaslerVidClient:
         try:
             while True:
                 t_ms, frame = out_q.get()
-                cv2.imshow("preview", frame)
+                cv2.imshow("preview", preview)
                 if cv2.waitKey(25) & 0xFF == ord('q'):
                     break
 
@@ -208,6 +217,29 @@ class BaslerVidClient:
             return 0
 
         return 0
+
+
+    def minimal(self):
+        import cv2
+        logger.debug("Running preview of camera")
+        manager = multiprocessing.Manager()
+        out_q = manager.Queue(maxsize=1)
+
+        self.fetcher_process = multiprocessing.Process(target=self.get_frames, args=(out_q, self._CameraClass), kwargs=self._camera_kwargs)
+        self.fetcher_process.start()
+
+        try:
+            while True:
+                t_ms, frame = out_q.get()
+                print(frame.shape)
+
+        except KeyboardInterrupt:
+            return 0
+
+        return 0
+
+
+
 
     def close(self):
         logger.debug("Closing baslervid")
@@ -222,6 +254,8 @@ class BaslerVidClient:
         
 
         if args.output is None:
+            self.minimal()
+        elif args.preview:
             self.preview()
         else:
             url = parse_protocol(args.output)

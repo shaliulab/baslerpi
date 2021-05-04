@@ -326,7 +326,7 @@ class FastTCPClient(TCPClient):
         #logger.info(f"{current_process}: Starting...")
 
     def run(self):
-        processes=8
+        processes=6
         args = (self.in_q, self.out_q, self._ip, self._port,self.stream,  self.encode, self._ENCODE_PARAM)
         
         #processes_dict={}
