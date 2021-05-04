@@ -60,7 +60,6 @@ class TCPClient:
             #print(received)
             recv_data = sock.recv(CHUNK_SIZE)
             received += len(recv_data)
-
         sock.close()
         return 0
     
@@ -181,6 +180,7 @@ class TCPClientThread(threading.Thread, TCPClient):
                 logger.debug("Sending to connection %d", data.connid)
                 try:
                     bef = time.time()
+                    print(len(data.outb))
                     sent = sock.send(data.outb)
                     aft = time.time()
                     networking_logger.debug(f"Elapsed time sending data.outb: {aft-bef}")
@@ -314,11 +314,33 @@ class FastTCPClient(TCPClient):
             #out_q.put(encoded_frame)
 
 
+    @staticmethod
+    def dummy(in_q, *args):
+        current_process = multiprocessing.current_process().name
+        logger.info(f"{current_process}: Starting...")
+
+        while True:
+            t_ms, frame = in_q.get(block=True, timeout=2)
+            time.sleep(1)
+        #current_process = multiprocessing.current_process().name
+        #logger.info(f"{current_process}: Starting...")
+
     def run(self):
-        processes=2
+        processes=6
         args = (self.in_q, self.out_q, self._ip, self._port,self.stream,  self.encode, self._ENCODE_PARAM)
+        
+        #processes_dict={}
+        #for i in range(processes):
+        #    #p=multiprocessing.Process(target=self.parallel_encoding, args=args)
+        #    p=multiprocessing.Process(target=self.dummy, args=args)
+        #    p.start()
+        #    processes_dict[i]=p
+
         with multiprocessing.Pool(processes=processes) as pool:
-           workers = pool.apply(self.parallel_encoding, args)
+           #workers = pool.apply(self.parallel_encoding, args)
+           workers = [pool.apply_async(self.parallel_encoding, args) for i in range(processes)]
+           #workers = [pool.apply(self.dummy, args) for i in range(processes)]
+           [w.get() for w in workers]
 
     def has_stopped(self):
         return self._stop_event.is_set()

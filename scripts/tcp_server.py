@@ -5,6 +5,7 @@ import sys
 import logging
 import logging.config
 import tempfile
+import time
 
 import cv2
 import matplotlib.pyplot as plt
@@ -64,9 +65,17 @@ def main():
         print(temp_file)
 
     try:
+        TICK_PERIOD = 1000
+        now = time.time() * 1000
+        last_tick = now
         while True:
             success, frame = tcp_server.dequeue()
-            print(success)
+            now = time.time() * 1000
+            if (last_tick + TICK_PERIOD) < now:
+                last_tick = now
+                logger.info(f"Computed framerate {tcp_server._count}")
+                tcp_server._count = 0
+
             if success:
                 if args.preview:
                     preview(frame)

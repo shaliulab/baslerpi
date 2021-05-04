@@ -13,6 +13,8 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+selected_socket = None
+
 class TCPServer(threading.Thread):
     """
     Receive TCP requests in the background
@@ -32,6 +34,7 @@ class TCPServer(threading.Thread):
         self._count = 0
         self._start_time = time.time()
         self._last_tick = self._start_time
+        self._data = {}
 
         if self._parallel:
             self._selector = selectors.DefaultSelector()
@@ -63,7 +66,7 @@ class TCPServer(threading.Thread):
     def accept_wrapper(self, sock):
 
         conn, addr = sock.accept()
-        print("connection ACCEPT ", addr)
+        logger.debug("connection ACCEPT %s", addr)
         conn.setblocking(False)
         data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"")
         events = selectors.EVENT_READ | selectors.EVENT_WRITE
@@ -72,7 +75,13 @@ class TCPServer(threading.Thread):
 
     def service_connection(self, key, mask):
 
+        global selected_socket
         sock = key.fileobj
+        if selected_socket is None:
+            selected_socket = sock
+        if selected_socket._closed:
+            selected_socket = sock
+
         data = key.data
         # the socket is ready to read
         if mask & selectors.EVENT_READ:
@@ -81,18 +90,40 @@ class TCPServer(threading.Thread):
                 if recv_data:
                     logger.debug("Serving read connection from %s", data.addr)
                     data.outb += recv_data
+                    if sock in self._data:
+                        self._data[sock] += recv_data
+                    else:
+                        self._data[sock] = recv_data
+
                     logger.debug("Length of received data %d", len(data.outb))
+                    if sock == selected_socket:
+                        pass
+                        # print(len(data.outb))
+                        # print(len(self._data[sock]))
      
                 else:
-                    print("connection CLOSE ", data.addr)
+                    logger.debug("connection CLOSE %s", data.addr)
                     self._selector.unregister(sock)
-                    img = self.decode(data.outb)
+                    if sock == selected_socket:
+                        pass
+                        # print(len(data.outb))
+                        # print(len(self._data[sock]))
+
+                    #img = self.decode(data.outb)
+                    length = self._data[sock][:16]
+                    img = self.decode(self._data[sock][16:])
                     if img is None:
                         pass
+                        #logger.warning("Decoded image is empty")
+                        raise Exception("Decoded image is empty")
                     else:
                         self._queue.put(img)
 
+                    del self._data[sock]
+                    if selected_socket == sock:
+                        selected_sock = None
                     sock.close()
+                    self._count += 1
     
             except ConnectionResetError:
                 print("Client is closed")

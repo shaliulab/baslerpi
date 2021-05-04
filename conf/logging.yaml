@@ -46,7 +46,8 @@ loggers:
     propagate: no
   baslerpi.web_utils.server:
     handlers: [console]
-    level: DEBUG
+    #level: DEBUG
+    level: INFO
     propagate: no
   baslerpi.processing.annotate:
     handlers: [console]
