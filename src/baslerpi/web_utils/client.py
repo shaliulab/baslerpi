@@ -298,12 +298,16 @@ class FastTCPClient(TCPClient):
 
         count=0
         last_tick = 0
+        now = time.time()
         while True:
+            print(f"Getting frame at {time.time() - now}")
             t_ms, frame = in_q.get(block=True, timeout=2)
-
+            print(f"Encoding frame at {time.time() - now}")
             encoded_frame = encode(frame, *args)
             networking_logger.debug(f"{current_process}: Streaming frame")
+            print(f"Streaming frame at {time.time() - now}")
             stream(ip, port, encoded_frame)
+            print(f"Done at {time.time() - now}")
             count+=1
             if (t_ms - last_tick) > 1000:
                 last_tick = t_ms
@@ -326,15 +330,9 @@ class FastTCPClient(TCPClient):
         #logger.info(f"{current_process}: Starting...")
 
     def run(self):
-        processes=6
+        processes=1
         args = (self.in_q, self.out_q, self._ip, self._port,self.stream,  self.encode, self._ENCODE_PARAM)
         
-        #processes_dict={}
-        #for i in range(processes):
-        #    #p=multiprocessing.Process(target=self.parallel_encoding, args=args)
-        #    p=multiprocessing.Process(target=self.dummy, args=args)
-        #    p.start()
-        #    processes_dict[i]=p
         frames_available = self.in_q.qsize()
         while frames_available == 0:
             time.sleep(1)
