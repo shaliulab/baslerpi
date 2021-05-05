@@ -21,7 +21,7 @@ class TCPServer(threading.Thread):
     """
 
     _TICK_PERIOD = 1000
-    _CHUNK_SIZE = 1024*10
+    _CHUNK_SIZE = 1024*100
 
     def __init__(self, ip, port, *args, parallel=True, **kwargs):
 
@@ -35,6 +35,9 @@ class TCPServer(threading.Thread):
         self._start_time = time.time()
         self._last_tick = self._start_time
         self._data = {}
+        self._until_the_end_data = {}
+        self._lengths = {}
+        self._complete = {}
 
         if self._parallel:
             self._selector = selectors.DefaultSelector()
@@ -73,6 +76,13 @@ class TCPServer(threading.Thread):
         self._selector.register(conn, events, data=data)
         return 0
 
+    def close_socket(self, sock):
+        sock.close()
+        del self._data[sock]
+        del self._lengths[sock]
+        del self._until_the_end_data[sock]
+ 
+    
     def service_connection(self, key, mask):
 
         global selected_socket
@@ -82,6 +92,10 @@ class TCPServer(threading.Thread):
         if selected_socket._closed:
             selected_socket = sock
 
+        #print(self._data.keys())
+        #for k in self._data:
+        #    print(len(self._data[k]))
+
         data = key.data
         # the socket is ready to read
         if mask & selectors.EVENT_READ:
@@ -90,10 +104,16 @@ class TCPServer(threading.Thread):
                 if recv_data:
                     logger.debug("Serving read connection from %s", data.addr)
                     data.outb += recv_data
+                    #print(f"Adding to the stored data {len(recv_data)}")
                     if sock in self._data:
                         self._data[sock] += recv_data
+                        self._until_the_end_data[sock] += recv_data
                     else:
+                        length = recv_data[:16]
+                        self._lengths[sock] = length
+                        recv_data=recv_data[16:]
                         self._data[sock] = recv_data
+                        self._until_the_end_data[sock] = recv_data
 
                     logger.debug("Length of received data %d", len(data.outb))
                     if sock == selected_socket:
@@ -110,8 +130,17 @@ class TCPServer(threading.Thread):
                         # print(len(self._data[sock]))
 
                     #img = self.decode(data.outb)
-                    length = self._data[sock][:16]
-                    img = self.decode(self._data[sock][16:])
+                    length = self._lengths[sock]
+                    encoded_frame = self._until_the_end_data[sock]
+                    try:
+                        assert int(length.decode("utf-8")) == len(encoded_frame)
+                    except AssertionError as error:
+                        print(length)
+                        print(len(encoded_frame))
+                        raise error
+                    self._complete[sock] = True
+
+                    img = self.decode(encoded_frame)
                     if img is None:
                         pass
                         #logger.warning("Decoded image is empty")
@@ -119,10 +148,10 @@ class TCPServer(threading.Thread):
                     else:
                         self._queue.put(img)
 
-                    del self._data[sock]
                     if selected_socket == sock:
                         selected_sock = None
-                    sock.close()
+                    self.close_socket(sock)
+
                     self._count += 1
     
             except ConnectionResetError:
@@ -131,17 +160,32 @@ class TCPServer(threading.Thread):
 
 
         if mask & selectors.EVENT_WRITE:
-            if data.outb:
+            #if data.outb:
+
+            if sock in self._data:
                 #print("Echoing to ", data.addr)
                 logger.debug("Serving write connection from %s", data.addr)
-
                 try:
-                    original_length = len(data.outb)
-                    sent = sock.send(data.outb)
-                    data.outb = data.outb[sent:]
+                    #if len(self._data[sock]) != len(self._lengths[sock]) and sock in self._complete:
+                    #     pass
+                    #else:
+                    #     return
+
+                    original_length = len(self._data[sock])
+                    sent = sock.send(self._lengths[sock])
+                    sent = sock.send(self._data[sock])
+                    #print(f"Removing from the stored data {sent}")
+                    self._data[sock] = self._data[sock][sent:]
+                    #data.outb = data.outb[sent:]
                     logger.debug("Length of sent data %s", sent)
-                    if len(data.outb) == 0 and sent == original_length:
+                    #print(sent)
+                    if len(self._data[sock]) == 0 and sent == original_length:
                         logger.debug("Success in echoing")
+
+                    if len(self._data[sock]) == 0 and sent != 0:
+                        pass
+
+
                 except Exception as error:
                     logger.warning(error)
                     logger.warning("Could not echo data back to client")
@@ -185,6 +229,7 @@ class TCPServer(threading.Thread):
 
     @staticmethod
     def decode(stringData):
+        #print(stringData)
         try:
             data = np.frombuffer(stringData, dtype='uint8')
         except TypeError:
