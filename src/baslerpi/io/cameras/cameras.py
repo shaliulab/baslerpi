@@ -78,6 +78,8 @@ class BaseCamera:
     def time_stamp(self):
         if self._start_time is None:
             return 0
+        elif self._use_wall_clock:
+            return time.time()
         else:
             now = time.time()
             return now - self._start_time
