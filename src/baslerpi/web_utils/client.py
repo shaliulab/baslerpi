@@ -313,20 +313,28 @@ class FastTCPClient(TCPClient):
         while True:
             print(f"Getting frame at {time.time() - now}")
             t_ms, frame = in_q.get(block=True, timeout=2)
-            print(f"Encoding frame at {time.time() - now}")
-            encoded_frame = encode(frame, *args)
-            networking_logger.debug(f"{current_process}: Streaming frame")
-            print(f"Streaming frame at {time.time() - now}")
-            stream(ip, port, encoded_frame, chunk_size)
-            print(f"Done at {time.time() - now}")
-            count+=1
-            if (t_ms - last_tick) > 1000:
-                last_tick = t_ms
-                logger.info(f"{current_process} framerate: {count}")
-                count = 0
-
-
-            #out_q.put(encoded_frame)
+            if (t_ms + 50) < (time.time() * 1000):
+                print("Removing frame")
+                del frame
+            else:
+                print(t_ms + 50)
+                print(time.time())
+                print(f"Encoding frame at {time.time() - now}")
+                encoded_frame = encode(frame, *args)
+                networking_logger.debug(f"{current_process}: Streaming frame")
+                print(f"Streaming frame at {time.time() - now}")
+                try:
+                    stream(ip, port, encoded_frame, chunk_size)
+                except Exception as error:
+                    print(error)
+                    print("Some problem happened during streaming. See error")
+                print(f"Done at {time.time() - now}")
+                count+=1
+                if (t_ms - last_tick) > 1000:
+                    last_tick = t_ms
+                    logger.info(f"{current_process} framerate: {count}")
+                    count = 0
+                #out_q.put(encoded_frame)
 
 
     @staticmethod
@@ -341,7 +349,7 @@ class FastTCPClient(TCPClient):
         #logger.info(f"{current_process}: Starting...")
 
     def run(self):
-        processes=4
+        processes=1
         args = (self.in_q, self.out_q, self._ip, self._port,self.stream,  self.encode, self._CHUNK_SIZE, self._ENCODE_PARAM)
         
         frames_available = self.in_q.qsize()

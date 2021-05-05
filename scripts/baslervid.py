@@ -11,7 +11,9 @@ import time
 import logging
 import logging.config
 import multiprocessing
+import queue
 import math
+
 
 import numpy as np
 
@@ -106,7 +108,8 @@ class BaslerVidClient:
             logger.error("Please emulate with random or deterministic camera")
         
         self.manager = multiprocessing.Manager()
-        self.out_q = self.manager.Queue(maxsize=1)
+        #self.out_q = self.manager.list(range(1))
+        self.out_q = self.manager.Queue()
  
         camera_kwargs = {
             # temporal resolution
@@ -156,7 +159,8 @@ class BaslerVidClient:
         self.tcp_client.start()
 
 
-    def get_frames(self, out_q, CameraClass, **camera_kwargs):
+    @staticmethod
+    def get_frames(out_q, CameraClass, **camera_kwargs):
 
         camera = CameraClass(**camera_kwargs)
         camera.open()
@@ -170,10 +174,12 @@ class BaslerVidClient:
                 count = 0
             else:
                 count += 1
-                
-            if out_q.qsize() == 1:
-                out_q.get()
-            out_q.put((t_ms, frame))
+            try:
+                out_q.put((t_ms, frame), block=False)
+                print(out_q.qsize())
+            except BrokenPipeError as error:
+                raise error
+
 
         camera.close()
         return 0
@@ -252,7 +258,6 @@ class BaslerVidClient:
         """
         Run baslervid by following user's arguments
         """
-        
 
         if args.output is None:
             self.minimal()
