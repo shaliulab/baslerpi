@@ -102,6 +102,9 @@ class BaslerVidClient:
         else:
             logger.error("Please emulate with random or deterministic camera")
         
+        self.manager = multiprocessing.Manager()
+        self.out_q = self.manager.Queue(maxsize=1)
+ 
         camera_kwargs = {
             # temporal resolution
             "framerate": args.framerate,
@@ -144,9 +147,6 @@ class BaslerVidClient:
 
         host, port = url[1].split(":")
         logger.debug(f"Streaming data to {url}")
-        #in_q=multiprocessing.Queue(maxsize=1)
-        #out_q=multiprocessing.Queue(maxsize=1)
-        #tcp_client = TCPClientClass(in_q, out_q, host, int(port))
         self.tcp_client = TCPClientClass(in_q, host, int(port))
         self.tcp_client.daemon = True
         self.tcp_client.start()
@@ -167,7 +167,8 @@ class BaslerVidClient:
             else:
                 count += 1
                 
-            print(out_q.qsize())
+            if out_q.qsize() == 1:
+                out_q.get()
             out_q.put((t_ms, frame))
 
         camera.close()
@@ -200,15 +201,13 @@ class BaslerVidClient:
         """
         import cv2
         logger.debug("Running preview of camera")
-        manager = multiprocessing.Manager()
-        out_q = manager.Queue(maxsize=1)
 
-        self.fetcher_process = multiprocessing.Process(target=self.get_frames, args=(out_q, self._CameraClass), kwargs=self._camera_kwargs)
+        self.fetcher_process = multiprocessing.Process(target=self.get_frames, args=(self.out_q, self._CameraClass), kwargs=self._camera_kwargs)
         self.fetcher_process.start()
 
         try:
             while True:
-                t_ms, frame = out_q.get()
+                t_ms, frame = self.out_q.get()
                 cv2.imshow("preview", preview)
                 if cv2.waitKey(25) & 0xFF == ord('q'):
                     break
@@ -222,15 +221,13 @@ class BaslerVidClient:
     def minimal(self):
         import cv2
         logger.debug("Running preview of camera")
-        manager = multiprocessing.Manager()
-        out_q = manager.Queue(maxsize=1)
 
-        self.fetcher_process = multiprocessing.Process(target=self.get_frames, args=(out_q, self._CameraClass), kwargs=self._camera_kwargs)
+        self.fetcher_process = multiprocessing.Process(target=self.get_frames, args=(self.out_q, self._CameraClass), kwargs=self._camera_kwargs)
         self.fetcher_process.start()
 
         try:
             while True:
-                t_ms, frame = out_q.get()
+                t_ms, frame = self.out_q.get()
                 print(frame.shape)
 
         except KeyboardInterrupt:
@@ -265,13 +262,11 @@ class BaslerVidClient:
                 else:
                     self.save(args.output)
             else:
-                manager = multiprocessing.Manager()
-                out_q = manager.Queue(maxsize=1)
-                self.fetcher_process = multiprocessing.Process(target=self.get_frames, args=(out_q, self._CameraClass), kwargs=self._camera_kwargs)
+                self.fetcher_process = multiprocessing.Process(target=self.get_frames, args=(self.out_q, self._CameraClass), kwargs=self._camera_kwargs)
                 self.fetcher_process.start()
 
                 try:
-                    self.stream(url, in_q=out_q)
+                    self.stream(url, in_q=self.out_q)
                 except KeyboardInterrupt:
                     pass
                 finally:
