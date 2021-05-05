@@ -341,7 +341,7 @@ class FastTCPClient(TCPClient):
         #logger.info(f"{current_process}: Starting...")
 
     def run(self):
-        processes=1
+        processes=4
         args = (self.in_q, self.out_q, self._ip, self._port,self.stream,  self.encode, self._CHUNK_SIZE, self._ENCODE_PARAM)
         
         frames_available = self.in_q.qsize()
