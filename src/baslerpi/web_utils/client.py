@@ -16,6 +16,7 @@ encoding_logger = logging.getLogger(__name__ + ".encoding")
 
 class TCPClient:
 
+    _CHUNK_SIZE = 1024*10
     _num_conns = 1
     #_num_conns = 1
     _ENCODE_PARAM=[int(cv2.IMWRITE_JPEG_QUALITY),90]
@@ -38,29 +39,39 @@ class TCPClient:
         return stringData
 
     @staticmethod
-    def stream(ip, port, stringData):
-        CHUNK_SIZE = 1024*10
+    def stream(ip, port, stringData, chunk_size):
+        now = time.time()
         header = str(len(stringData)).ljust(16)
         logger.debug("Sending frame to TCP server")
         try:
+            print(f"Creating connection at {time.time() - now}")
             sock = socket.create_connection((ip, port))
         except ConnectionRefusedError as error:
             logger.warning("Connection refused")
             return None
 
+        print(f"Encoding header at {time.time() - now}")
         sock.send(header.encode("utf-8"));
 
         bef = time.time()
+        print(f"Sending data at {time.time() - now}")
         sock.send(stringData);
         aft = time.time()
         networking_logger.debug(f"Elapsed time sending data: {aft-bef}")
 
+        print(f"Receiving data at {time.time() - now}")
         received = 0
+        i=0
         while received < len(stringData):
             #print(received)
-            recv_data = sock.recv(CHUNK_SIZE)
+            recv_data = sock.recv(chunk_size)
             received += len(recv_data)
+            i+=1
+
+        print(f"Iterated {i} times")
+        print(f"Closing socket at {time.time() - now}")
         sock.close()
+        print(f"Done")
         return 0
     
     def _get_and_encode(self):
@@ -89,7 +100,7 @@ class TCPClientBasic(threading.Thread, TCPClient):
     def run(self):
         while not self.has_stopped():
             frame = self._get_and_encode()
-            data = self.stream(self._ip, self._port, frame)
+            data = self.stream(self._ip, self._port, frame, self._CHUNK_SIZE)
 
 
 class TCPClientThread(threading.Thread, TCPClient):
@@ -292,7 +303,7 @@ class FastTCPClient(TCPClient):
         return stringData
     
     @staticmethod
-    def parallel_encoding(in_q, out_q, ip, port, stream, encode, *args):
+    def parallel_encoding(in_q, out_q, ip, port, stream, encode, chunk_size, *args):
         current_process = multiprocessing.current_process().name
         logger.info(f"{current_process}: Starting...")
 
@@ -306,7 +317,7 @@ class FastTCPClient(TCPClient):
             encoded_frame = encode(frame, *args)
             networking_logger.debug(f"{current_process}: Streaming frame")
             print(f"Streaming frame at {time.time() - now}")
-            stream(ip, port, encoded_frame)
+            stream(ip, port, encoded_frame, chunk_size)
             print(f"Done at {time.time() - now}")
             count+=1
             if (t_ms - last_tick) > 1000:
@@ -331,7 +342,7 @@ class FastTCPClient(TCPClient):
 
     def run(self):
         processes=1
-        args = (self.in_q, self.out_q, self._ip, self._port,self.stream,  self.encode, self._ENCODE_PARAM)
+        args = (self.in_q, self.out_q, self._ip, self._port,self.stream,  self.encode, self._CHUNK_SIZE, self._ENCODE_PARAM)
         
         frames_available = self.in_q.qsize()
         while frames_available == 0:

@@ -11,6 +11,7 @@ import time
 import logging
 import logging.config
 import multiprocessing
+import math
 
 import numpy as np
 
@@ -54,7 +55,9 @@ ap.add_argument("-o", "--output", required=False)
 ap.add_argument("-fps", "--framerate", default=30, type=int)
 ap.add_argument("-ss", "--shutter", default=15000, type=int, help="Manually controls the speed of the camera’s shutter in microseconds (i.e. 1e6 us = 1s")
 ap.add_argument("-v", "--verbose", dest="verbose", default=False, action="store_true")
+
 ap.add_argument("-t", "--timeout", default=5000, type=int, help="Control the timeout, in ms, that the video will be recorded")
+ap.add_argument("--count", dest="count", default=math.inf, type=int, help="Number of frames to be recorded")
 ap.add_argument("-cfx", "--colfx", default="128:128", help="""
     TODO Allows the user to adjust the YUV colour space for fine-grained control of the final image.
     Values should be given as U:V , where U controls the chrominance and V the luminance.
@@ -116,6 +119,7 @@ class BaslerVidClient:
             # ISO
             "iso": args.iso,
             "timeout": args.timeout,
+            "count": args.count,
             # color scale of the camera
             "colfx": args.colfx
         }

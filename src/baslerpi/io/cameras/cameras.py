@@ -3,6 +3,7 @@ __author__ = 'antonio'
 import logging
 import logging.config
 import time
+import math
 logger = logging.getLogger(__name__)
 
 from baslerpi.utils import read_config_yaml
@@ -17,7 +18,7 @@ from baslerpi.utils import read_config_yaml
 class BaseCamera:
 
     def __init__(self, width=1280, height=960, drop_each=1, colfx="128:128", max_duration=None,
-        use_wall_clock=True, framerate=30, shutter=15000, iso=None, timeout=5000, wait_timeout=30000,
+        use_wall_clock=True, framerate=30, shutter=15000, iso=None, timeout=5000, count=math.inf, wait_timeout=30000,
         annotator=None
     ):
         """
@@ -69,6 +70,7 @@ class BaseCamera:
         self._recording_timeout = timeout
         self._annotator = annotator
         self._count = 0
+        self._maxcount = count
 
     def annotate(self, frame):
         if self._annotator:
@@ -119,6 +121,10 @@ class BaseCamera:
                 break
             t_ms = int(1000 * time_s)
             at_least_one_frame = True
+
+            if self._count  > self._maxcount:
+                print("Breaking")
+                break
 
             if (self._frame_idx % self._drop_each) == 0:
                 logger.debug("Yielding frame")
