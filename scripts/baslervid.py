@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/env python
 
 """
 A raspivid-like executable to interact with Basler cameras
