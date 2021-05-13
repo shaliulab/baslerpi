@@ -18,9 +18,9 @@ from baslerpi.io.cameras.dlc_camera import Camera as DLCCamera
 
 class BaseCamera(DLCCamera):
 
-    def __init__(self, drop_each=1, colfx="128:128", max_duration=None,
+    def __init__(self, *args, drop_each=1, colfx="128:128", max_duration=None,
         use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=30000,
-        annotator=None
+        annotator=None, **kwargs
     ):
         """
         The template class to generate and use video streams.
