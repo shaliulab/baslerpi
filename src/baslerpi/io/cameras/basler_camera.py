@@ -7,7 +7,6 @@ import traceback
 
 # Optional modules
 from pypylon import pylon
-import cv2
 
 # Local library
 from baslerpi.decorators import drive_basler
@@ -54,6 +53,9 @@ class BaslerCamera(BaseCamera):
         self.framerate = self._target_framerate
         time.sleep(1)
         self._report()
+
+    def set_capture_device(self):
+        return self.configure()
 
     def open(self, maxframes=None, buffersize=5):
         """

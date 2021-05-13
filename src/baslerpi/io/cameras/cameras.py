@@ -3,9 +3,11 @@ __author__ = 'antonio'
 import logging
 import logging.config
 import time
+import math
 logger = logging.getLogger(__name__)
 
 from baslerpi.utils import read_config_yaml
+from baslerpi.io.cameras.dlc_camera import Camera as DLCCamera
 
 #config = read_config_yaml("scripts/logging.yaml")
 #logging.config.dictConfig(config)
@@ -14,10 +16,10 @@ from baslerpi.utils import read_config_yaml
 # pylint: disable=W0223
 
 
-class BaseCamera:
+class BaseCamera(DLCCamera):
 
-    def __init__(self, width=1280, height=960, drop_each=1, colfx="128:128", max_duration=None,
-        use_wall_clock=True, framerate=30, shutter=15000, iso=None, timeout=5000, wait_timeout=30000,
+    def __init__(self, drop_each=1, colfx="128:128", max_duration=None,
+        use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=30000,
         annotator=None
     ):
         """
@@ -49,9 +51,11 @@ class BaseCamera:
         :param args: additional arguments
         :param kwargs: additional keyword arguments
         """
+        super().__init__(*args, **kwargs)
 
-        self._width = width
-        self._height = height 
+        self._width = self.im_size[0]
+        self._height = self.im_size[1]
+        self._iso = self.gain
 
         self._max_duration = max_duration
         self.stopped = False
@@ -59,16 +63,17 @@ class BaseCamera:
         self._shape = (None, None)
         self._use_wall_clock = use_wall_clock
         self._start_time = None
-        self._target_framerate = framerate
+        self._target_framerate = self.fps
         self._computed_framerate = 0
         self._framerate  = 0
-        self._target_exposuretime = shutter
+        self._target_exposuretime = self.exposure
         self._exposuretime = 0
         self._drop_each = drop_each
         self._timeout = wait_timeout
         self._recording_timeout = timeout
         self._annotator = annotator
         self._count = 0
+        self._maxcount = count
 
     def annotate(self, frame):
         if self._annotator:
@@ -122,6 +127,10 @@ class BaseCamera:
             t_ms = int(1000 * time_s)
             at_least_one_frame = True
 
+            if self._count  > self._maxcount:
+                print("Breaking")
+                break
+
             if (self._frame_idx % self._drop_each) == 0:
                 logger.debug("Yielding frame")
                 self._count += 1
@@ -156,6 +165,13 @@ class BaseCamera:
 
     def is_last_frame(self):
         raise NotImplementedError
+    
+    def get_image(self):
+        frame = self._next_image()
+        if self.crop is not None:
+            frame = frame[self.crop[2]:self.crop[3], self.crop[0]:self.crop[1]]
+        return frame
+
 
     def _next_image(self):
         raise NotImplementedError
@@ -168,6 +184,9 @@ class BaseCamera:
 
     def close(self):
         raise NotImplementedError
+
+    def close_capture_device(self):
+        return self.close()
 
     def restart(self):
         """
