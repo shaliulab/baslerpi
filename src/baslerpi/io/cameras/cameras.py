@@ -75,6 +75,11 @@ class BaseCamera(DLCCamera):
         self._count = 0
         self._maxcount = count
 
+    @staticmethod
+    def arg_restrictions():
+        return {"use_wall_clock": [True, False]}
+
+
     def annotate(self, frame):
         if self._annotator:
             frame = self._annotator.annotate(frame)

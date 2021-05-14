@@ -36,6 +36,11 @@ class BaslerCamera(BaseCamera):
         self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         super().__init__(*args, **kwargs)
 
+    @staticmethod
+    def arg_restrictions():
+        arg_restrictions = super().arg_restrictions()
+        return arg_restrictions
+
     def is_last_frame(self):
         # TODO
         return False
