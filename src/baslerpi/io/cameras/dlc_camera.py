@@ -91,6 +91,7 @@ class Camera(object):
         if not res:
             raise CameraError("Resolution is not set!")
 
+        print(res)
         self.im_size = (
             (int(res[0]), int(res[1]))
             if self.crop is None

@@ -77,7 +77,9 @@ class BaseCamera(DLCCamera):
 
     @staticmethod
     def arg_restrictions():
-        return {"use_wall_clock": [True, False]}
+        arg_restrictions.update({"use_wall_clock": [True, False]}) 
+        return arg_restrictions
+
 
 
     def annotate(self, frame):
@@ -171,13 +173,6 @@ class BaseCamera(DLCCamera):
     def is_last_frame(self):
         raise NotImplementedError
     
-    def get_image(self):
-        frame = self._next_image()
-        if self.crop is not None:
-            frame = frame[self.crop[2]:self.crop[3], self.crop[0]:self.crop[1]]
-        return frame
-
-
     def _next_image(self):
         raise NotImplementedError
 
@@ -189,9 +184,6 @@ class BaseCamera(DLCCamera):
 
     def close(self):
         raise NotImplementedError
-
-    def close_capture_device(self):
-        return self.close()
 
     def restart(self):
         """

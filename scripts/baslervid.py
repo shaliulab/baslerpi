@@ -95,7 +95,6 @@ class BaslerVidClient:
             CameraClass = DeterministicCamera
         else:
             logger.error("Please emulate with random or deterministic camera")
-<<<<<<< HEAD
 
         annotator = Annotator()
         if args.annotate:

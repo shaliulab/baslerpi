@@ -4,9 +4,11 @@ import os
 import os.path
 import time
 import traceback
+import math
 
 # Optional modules
 from pypylon import pylon
+import cv2
 
 # Local library
 from baslerpi.decorators import drive_basler
@@ -32,14 +34,10 @@ class BaslerCamera(BaseCamera):
     close():       Close the camera
     """
 
-    def __init__(self, *args, **kwargs):
-        self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+    def __init__(self, *args, init_now=True, **kwargs):
+        if init_now:
+            self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         super().__init__(*args, **kwargs)
-
-    @staticmethod
-    def arg_restrictions():
-        arg_restrictions = super().arg_restrictions()
-        return arg_restrictions
 
     def is_last_frame(self):
         # TODO
@@ -56,11 +54,7 @@ class BaslerCamera(BaseCamera):
         self.camera.AcquisitionFrameRateEnable.SetValue(True)
         time.sleep(1)
         self.framerate = self._target_framerate
-        time.sleep(1)
         self._report()
-
-    def set_capture_device(self):
-        return self.configure()
 
     def open(self, maxframes=None, buffersize=5):
         """
@@ -89,12 +83,13 @@ class BaslerCamera(BaseCamera):
             self._start_time = time.time()
             logger.info("Resolution of incoming frames: %dx%d", image.shape[1], image.shape[0])
             self.configure()
-            self._report()
 
         except Exception as error:
             logger.error("Cannot open camera. See error trace below")
             logger.error(error)
             logger.warning(traceback.print_exc())
+
+        return True
 
 
     def _next_image(self):
@@ -152,15 +147,15 @@ class BaslerCamera(BaseCamera):
         self.stopped = True
         self.camera.Close()
 
-    @property
-    @drive_basler
-    def resolution(self):
-        r"""
-        Convenience function to return resolution of camera.
-        Resolution = (number_horizontal_pixels, number_vertical_pixels)
-        """
-        self._resolution = (self.camera.Width.GetValue(), self.camera.Height.GetValue())
-        return self._resolution
+#    @property
+#    @drive_basler
+#    def resolution(self):
+#        r"""
+#        Convenience function to return resolution of camera.
+#        Resolution = (number_horizontal_pixels, number_vertical_pixels)
+#        """
+#        self._resolution = (self.camera.Width.GetValue(), self.camera.Height.GetValue())
+#        return self._resolution
 
     @property
     @drive_basler
@@ -222,6 +217,57 @@ class BaslerCamera(BaseCamera):
             logger.warning("Error in exposuretime setter")
 
 
+class BaslerCameraDLC(BaslerCamera):
+    """
+    A clone of BaslerCamera where its arguments are explicit and not inherited from abstract classes
+    """
+
+    def __init__(self, *args, id=0, resolution=(2592, 1944), exposure=15000, gain=0,rotate=0, crop=None, fps=30, use_tk_display=False, display_resize=1.0,
+            drop_each=1, colfx="128:128", max_duration=None, use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=3000, annotator=None,**kwargs):
+
+        if isinstance(resolution, str):
+            resolution = [int(e) for e in resolution.split("x")]
+        elif isinstance(resolution, list) or isinstance(resolution, tuple):
+            resolution = [int(e) for e in "".join(resolution).split("x")]
+          
+        super().__init__(*args, id=id, init_now=False, resolution=resolution, exposure=exposure, gain=gain, rotate=rotate, crop=crop, fps=fps, use_tk_display=use_tk_display, display_resize=display_resize,
+                drop_each=drop_each, colfx=colfx, max_duration=max_duration, use_wall_clock=use_wall_clock, timeout=timeout, count=count, wait_timeout=wait_timeout, annotator=annotator, **kwargs)
+
+    def __getstate__(self):
+        d=self.__dict__
+        attrs = dict(d)
+        camera=attrs.pop("camera", None)
+        return attrs
+
+    def __setstate__(self, d):
+        self.__dict__ = d
+
+    def configure(self):
+        super().configure()
+        return True
+
+    def set_capture_device(self):
+        self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+        return self.open()
+
+    def close_capture_device(self):
+        return self.close()
+
+    @staticmethod
+    def arg_restrictions():
+        arg_restrictions = {"use_wall_clock": [True, False]}
+        return arg_restrictions
+
+    def get_image(self):
+        frame = self._next_image()
+        if self.crop is not None:
+            frame = frame[self.crop[2]:self.crop[3], self.crop[0]:self.crop[1]]
+
+        if len(frame.shape) == 2 or frame.shape[2] == 1:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        return frame
+
+
 if __name__ == "__main__":
 
     camera = BaslerCamera()
@@ -237,4 +283,6 @@ if __name__ == "__main__":
             break
 
     camera.close()
+
+
 
