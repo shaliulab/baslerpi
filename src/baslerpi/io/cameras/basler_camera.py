@@ -65,7 +65,7 @@ class BaslerCamera(BaseCamera):
         Try to fetch a frame
         """
         try:
-            if self.camera is None:
+            if not getattr(self, "camera", False):
                 self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
               
 
@@ -294,9 +294,6 @@ class BaslerCameraDLCCompatibility(BaslerCameraDLC):
         if "iso" in kwargs:
             kwargs["gain"] = int(kwargs.pop("iso") or 0)
         
-        #
-        self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-
         print("Loading camera...")        
         super().__init__(*args, **kwargs)
 
