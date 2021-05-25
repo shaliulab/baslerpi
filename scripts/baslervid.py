@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 
 from baslerpi.utils import parse_protocol, read_config_yaml
-from baslerpi.io.cameras.basler_camera import BaslerCamera
+from baslerpi.io.cameras.basler_camera import BaslerCamera, BaslerCameraDLCCompatibility
 from baslerpi.io.cameras.emulator_camera import RandomCamera, DeterministicCamera
 from baslerpi.web_utils import TCPClient
 from baslerpi.processing.annotate import Annotator
@@ -58,7 +58,7 @@ ap.add_argument("-cfx", "--colfx", default="128:128", help="""
 ap.add_argument("-ISO", "--ISO", dest="iso", type=range_limited_int_type, help="TODO ISO sensitivity")
 #ap.add_argument("-roi", "--roi", nargs="4",  help="TODO Allows part of the camera sensor to be specified as the capture source. Ex 0 0 100 100", required=False, default="0 0 math.inf math.inf")
 ap.add_argument("-n", "--no-preview", dest="preview", default=False, action="store_false", help="TODO Does not display a preview window while capturing.")
-ap.add_argument("-p", "--preview", dest="preview", nargs=4, help=
+ap.add_argument("-p", "--preview", dest="preview", type=int, nargs=4, help=
     """
     TODO
     Sets the size of the preview window and where it appears.
@@ -93,6 +93,8 @@ class BaslerVidClient:
             CameraClass = RandomCamera
         elif args.emulate == "deterministic":
             CameraClass = DeterministicCamera
+        elif args.emulate == "dlclive":
+            CameraClass = BaslerCameraDLCCompatibility
         else:
             logger.error("Please emulate with random or deterministic camera")
 
@@ -175,18 +177,25 @@ class BaslerVidClient:
         Preview data in a pop up window live
         """
         logger.debug("Running preview of camera")
+        
 
 
-        try:
-            for t_ms, frame in self._camera:
-                pass
-                #cv2.imshow("preview", frame)
-                #if cv2.waitKey(25) & 0xFF == ord('q'):
-                #    break
+        initialized = False
+        cv2.namedWindow("preview", cv2.WINDOW_NORMAL)
+        cv2.moveWindow("preview", *args.preview[:2])
+        cv2.resizeWindow("preview", *args.preview[2:4])
 
-        except KeyboardInterrupt:
-            return 0
+        for t_ms, frame in self._camera:
+            try: 
+                if not initialized:
+                    pass
 
+                initialized = True
+                cv2.imshow("preview", frame)
+                if cv2.waitKey(25) & 0xFF == ord('q'):
+                   break
+            except KeyboardInterrupt:
+                return 0
         return 0
 
     def close(self):

@@ -58,9 +58,10 @@ class Camera(object):
         crop=None,
         fps=None,
         use_tk_display=False,
-        display_resize=1.0,
+        display_resize=1.0
     ):
-        """ Constructor method
+        """
+        Constructor method
         """
 
         self.id = id
@@ -91,7 +92,6 @@ class Camera(object):
         if not res:
             raise CameraError("Resolution is not set!")
 
-        print(res)
         self.im_size = (
             (int(res[0]), int(res[1]))
             if self.crop is None

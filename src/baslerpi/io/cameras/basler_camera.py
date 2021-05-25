@@ -13,6 +13,7 @@ import cv2
 # Local library
 from baslerpi.decorators import drive_basler
 from baslerpi.io.cameras.cameras import BaseCamera
+from baslerpi.io.cameras.dlc_camera import Camera as DLCCamera
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -34,7 +35,7 @@ class BaslerCamera(BaseCamera):
     close():       Close the camera
     """
 
-    def __init__(self, *args, init_now=True, **kwargs):
+    def __init__(self, *args, init_now=True, **kwargs):     
         if init_now:
             self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         super().__init__(*args, **kwargs)
@@ -217,21 +218,49 @@ class BaslerCamera(BaseCamera):
             logger.warning("Error in exposuretime setter")
 
 
-class BaslerCameraDLC(BaslerCamera):
+class BaslerCameraDLC(BaslerCamera, DLCCamera):
     """
     A clone of BaslerCamera where its arguments are explicit and not inherited from abstract classes
     """
 
-    def __init__(self, *args, id=0, resolution=(2592, 1944), exposure=15000, gain=0,rotate=0, crop=None, fps=30, use_tk_display=False, display_resize=1.0,
-            drop_each=1, colfx="128:128", max_duration=None, use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=3000, annotator=None,**kwargs):
+    def __init__(self, *args, id=0, resolution="2592x1944", exposure=15000, gain=0,rotate=0, crop=None, fps=None, use_tk_display=False, display_resize=1.0,
+            drop_each=1, max_duration=None, use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=3000, annotator=None, **kwargs):
 
-        if isinstance(resolution, str):
-            resolution = [int(e) for e in resolution.split("x")]
-        elif isinstance(resolution, list) or isinstance(resolution, tuple):
-            resolution = [int(e) for e in "".join(resolution).split("x")]
-          
-        super().__init__(*args, id=id, init_now=False, resolution=resolution, exposure=exposure, gain=gain, rotate=rotate, crop=crop, fps=fps, use_tk_display=use_tk_display, display_resize=display_resize,
-                drop_each=drop_each, colfx=colfx, max_duration=max_duration, use_wall_clock=use_wall_clock, timeout=timeout, count=count, wait_timeout=wait_timeout, annotator=annotator, **kwargs)
+        print("Loading camera...")
+
+        resolution = resolution.split("x")
+
+        DLCCamera.__init__(self, id, resolution=resolution, exposure=exposure, gain=gain, rotate=rotate, crop=crop, fps=fps, use_tk_display=use_tk_display, display_resize=display_resize)
+
+        # this bypasses the __init__ method of BaslerCamera
+        # de facto making the BaslerCamera part a composition, not an inheritance
+        super(BaslerCamera, self).__init__(
+            *args, drop_each=drop_each, max_duration=max_duration, use_wall_clock=use_wall_clock, timeout=timeout, count=count,
+            wait_timeout=wait_timeout, **kwargs
+        )
+
+
+class BaslerCameraDLCCompatibility(BaslerCameraDLC):
+
+    def __init__(self, *args, **kwargs):
+
+        if "framerate" in kwargs:
+            kwargs["fps"] = int(kwargs.pop("framerate") or 30)
+
+        if "height" in kwargs and "width" in kwargs:
+            kwargs["resolution"] = "x".join([str(kwargs.pop("width") or 2592), str(kwargs.pop("height" or 1944))])
+
+        if "shutter" in kwargs:
+            kwargs["exposure"] = int(kwargs.pop("shutter", 15000))
+
+
+        if "iso" in kwargs:
+            kwargs["gain"] = int(kwargs.pop("iso") or 0)
+        
+        #
+        self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+        
+        super().__init__(*args, **kwargs)
 
     def __getstate__(self):
         d=self.__dict__

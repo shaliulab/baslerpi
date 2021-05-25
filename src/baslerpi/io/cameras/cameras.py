@@ -7,7 +7,6 @@ import math
 logger = logging.getLogger(__name__)
 
 from baslerpi.utils import read_config_yaml
-from baslerpi.io.cameras.dlc_camera import Camera as DLCCamera
 
 #config = read_config_yaml("scripts/logging.yaml")
 #logging.config.dictConfig(config)
@@ -16,11 +15,11 @@ from baslerpi.io.cameras.dlc_camera import Camera as DLCCamera
 # pylint: disable=W0223
 
 
-class BaseCamera(DLCCamera):
+class BaseCamera:
 
-    def __init__(self, *args, drop_each=1, colfx="128:128", max_duration=None,
+    def __init__(self, drop_each=1, colfx="128:128", max_duration=None,
         use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=30000,
-        annotator=None, **kwargs
+        annotator=None
     ):
         """
         The template class to generate and use video streams.
@@ -51,7 +50,6 @@ class BaseCamera(DLCCamera):
         :param args: additional arguments
         :param kwargs: additional keyword arguments
         """
-        super().__init__(*args, **kwargs)
 
         self._width = self.im_size[0]
         self._height = self.im_size[1]
@@ -191,3 +189,9 @@ class BaseCamera(DLCCamera):
         :return:
         """
         raise NotImplementedError
+
+class ExtendableBaseCamera(BaseCamera):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
