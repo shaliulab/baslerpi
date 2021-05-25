@@ -223,5 +223,7 @@ class BaslerVidClient:
             else:
                 self.stream(url)
 
+        self._camera.close()
+
 baslervid = BaslerVidClient(args)
 baslervid.run(args)

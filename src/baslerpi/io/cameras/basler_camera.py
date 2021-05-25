@@ -35,7 +35,8 @@ class BaslerCamera(BaseCamera):
     close():       Close the camera
     """
 
-    def __init__(self, *args, init_now=True, **kwargs):     
+    def __init__(self, *args, init_now=True, **kwargs):
+        self.camera = None
         if init_now:
             self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
         super().__init__(*args, **kwargs)
@@ -64,6 +65,9 @@ class BaslerCamera(BaseCamera):
         Try to fetch a frame
         """
         try:
+            if self.camera is None:
+                self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+              
 
             self.camera.Open()
             self.configure()
@@ -223,10 +227,8 @@ class BaslerCameraDLC(BaslerCamera, DLCCamera):
     A clone of BaslerCamera where its arguments are explicit and not inherited from abstract classes
     """
 
-    def __init__(self, *args, id=0, resolution="2592x1944", exposure=15000, gain=0,rotate=0, crop=None, fps=None, use_tk_display=False, display_resize=1.0,
+    def __init__(self, *args, id=0, resolution="2592x1944", exposure=15000, gain=0,rotate=0, crop=None, fps=30, use_tk_display=False, display_resize=1.0,
             drop_each=1, max_duration=None, use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=3000, annotator=None, **kwargs):
-
-        print("Loading camera...")
 
         resolution = resolution.split("x")
 
@@ -236,8 +238,43 @@ class BaslerCameraDLC(BaslerCamera, DLCCamera):
         # de facto making the BaslerCamera part a composition, not an inheritance
         super(BaslerCamera, self).__init__(
             *args, drop_each=drop_each, max_duration=max_duration, use_wall_clock=use_wall_clock, timeout=timeout, count=count,
-            wait_timeout=wait_timeout, **kwargs
+            wait_timeout=wait_timeout, framerate=fps, width=resolution[0], height=resolution[1], **kwargs
         )
+
+
+    def __getstate__(self):
+        d=self.__dict__
+        attrs = dict(d)
+        camera=attrs.pop("camera", None)
+        return attrs
+
+    def __setstate__(self, d):
+        self.__dict__ = d
+
+    def configure(self):
+        super().configure()
+        return True
+
+    def set_capture_device(self):
+        return self.open()
+
+    def close_capture_device(self):
+        return self.close()
+
+    @staticmethod
+    def arg_restrictions():
+        arg_restrictions = {"use_wall_clock": [True, False]}
+        return arg_restrictions
+
+
+    def get_image(self):
+        frame = self._next_image()
+        if self.crop is not None:
+            frame = frame[self.crop[2]:self.crop[3], self.crop[0]:self.crop[1]]
+
+        if len(frame.shape) == 2 or frame.shape[2] == 1:
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        return frame
 
 
 class BaslerCameraDLCCompatibility(BaslerCameraDLC):
@@ -259,42 +296,18 @@ class BaslerCameraDLCCompatibility(BaslerCameraDLC):
         
         #
         self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-        
+
+        print("Loading camera...")        
         super().__init__(*args, **kwargs)
 
-    def __getstate__(self):
-        d=self.__dict__
-        attrs = dict(d)
-        camera=attrs.pop("camera", None)
-        return attrs
+    def close(self):
+         print("Closing camera...")
+         super().close()
 
-    def __setstate__(self, d):
-        self.__dict__ = d
+    def open(self):
+        print("Opening camera...")
+        return super().open()
 
-    def configure(self):
-        super().configure()
-        return True
-
-    def set_capture_device(self):
-        self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-        return self.open()
-
-    def close_capture_device(self):
-        return self.close()
-
-    @staticmethod
-    def arg_restrictions():
-        arg_restrictions = {"use_wall_clock": [True, False]}
-        return arg_restrictions
-
-    def get_image(self):
-        frame = self._next_image()
-        if self.crop is not None:
-            frame = frame[self.crop[2]:self.crop[3], self.crop[0]:self.crop[1]]
-
-        if len(frame.shape) == 2 or frame.shape[2] == 1:
-            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-        return frame
 
 
 if __name__ == "__main__":

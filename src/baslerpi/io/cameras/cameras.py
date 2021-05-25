@@ -17,7 +17,7 @@ from baslerpi.utils import read_config_yaml
 
 class BaseCamera:
 
-    def __init__(self, drop_each=1, colfx="128:128", max_duration=None,
+    def __init__(self, width=1280, height=960, framerate=30, exposure=15000, iso=0, drop_each=1, colfx="128:128", max_duration=None,
         use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=30000,
         annotator=None
     ):
@@ -51,9 +51,9 @@ class BaseCamera:
         :param kwargs: additional keyword arguments
         """
 
-        self._width = self.im_size[0]
-        self._height = self.im_size[1]
-        self._iso = self.gain
+        self._width = width
+        self._height = height
+        self._iso = iso
 
         self._max_duration = max_duration
         self.stopped = False
@@ -61,10 +61,10 @@ class BaseCamera:
         self._shape = (None, None)
         self._use_wall_clock = use_wall_clock
         self._start_time = None
-        self._target_framerate = self.fps
+        self._target_framerate = framerate
         self._computed_framerate = 0
         self._framerate  = 0
-        self._target_exposuretime = self.exposure
+        self._target_exposuretime = exposure
         self._exposuretime = 0
         self._drop_each = drop_each
         self._timeout = wait_timeout
@@ -72,13 +72,6 @@ class BaseCamera:
         self._annotator = annotator
         self._count = 0
         self._maxcount = count
-
-    @staticmethod
-    def arg_restrictions():
-        arg_restrictions.update({"use_wall_clock": [True, False]}) 
-        return arg_restrictions
-
-
 
     def annotate(self, frame):
         if self._annotator:
