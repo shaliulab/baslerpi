@@ -23,7 +23,8 @@ PIPELINES = {
     "full": [TimeAnnotator, FPSAnnotator, Inverter, Masker, Overlay],
     "invert": [Inverter, Overlay],
     "framecount": [FrameCountAnnotator],
-    "black-framecount": [BlackFrameCountAnnotator]
+    "black-framecount": [BlackFrameCountAnnotator],
+    "none": []
 }
 
 ap = argparse.ArgumentParser()
@@ -31,7 +32,7 @@ ap.add_argument("camera", choices=camera_choices)
 ap.add_argument("--input", dest="video_path", help="If using OpenCV camera, path to video or 0 for webcam input")
 ap.add_argument("--output", help="Path to output video (directory for ImgStore). It will be placed in the video folder as stated in the config file. See --config")
 ap.add_argument("--framerate", type=int, default=30, help="Frames Per Second of the camera")
-ap.add_argument("--exposure-time", dest="exposuretime", type=int, default=15000, help="Exposure time in useconds (10^-6 s)")
+ap.add_argument("--exposure-time", dest="exposure", type=int, default=25000, help="Exposure time in useconds (10^-6 s)")
 ap.add_argument("--fps", type=int, help="Frames Per Second of the video", required=False)
 ap.add_argument("--timeout", type=int, default=30000, help="Camera tries getting a frame for ms after the last successful trial")
 ap.add_argument("--config", help="Config file in json format", default="/etc/flyhostel.conf")
@@ -100,7 +101,8 @@ else:
         framerate=args.fps,
         duration=args.duration, maxframes=args.maxframes,
         verbose=args.verbose)
-    recorder.build_pipeline(*pipeline)
+    if pipeline:
+        recorder.build_pipeline(*pipeline)
     recorder.open(
         path=os.path.join(config["videos"]["folder"], OUTPUT),
         fmt = "mjpeg/avi"
