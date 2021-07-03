@@ -18,8 +18,7 @@ from baslerpi.utils import read_config_yaml
 class BaseCamera:
 
     def __init__(self, width=1280, height=960, framerate=30, exposure=15000, iso=0, drop_each=1, colfx="128:128", max_duration=None,
-        use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=30000,
-        annotator=None
+        use_wall_clock=False, timeout=5000, count=math.inf, wait_timeout=30000, preview=False, annotator=None
     ):
         """
         The template class to generate and use video streams.
@@ -71,6 +70,7 @@ class BaseCamera:
         self._recording_timeout = timeout
         self._annotator = annotator
         self._count = 0
+        self._preview = preview
         self._maxcount = count
 
     def annotate(self, frame):
@@ -137,6 +137,11 @@ class BaseCamera:
                     self._computed_framerate = self._count
                     logger.info(f"Computed framerate: {self._computed_framerate}")
                     self._count = 0
+
+                    if self._preview:
+                        import cv2
+                        cv2.imshow("preview", out)
+                        cv2.waitKey(1)
                 yield t_ms, out
 
             if (self._recording_timeout is not None and self._recording_timeout != 0) and t_ms > self._recording_timeout:
