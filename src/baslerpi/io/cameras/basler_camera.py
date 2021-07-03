@@ -67,7 +67,6 @@ class BaslerCamera(BaseCamera):
         try:
             if not getattr(self, "camera", False):
                 self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-              
 
             self.camera.Open()
             self.configure()
@@ -152,15 +151,15 @@ class BaslerCamera(BaseCamera):
         self.stopped = True
         self.camera.Close()
 
-#    @property
-#    @drive_basler
-#    def resolution(self):
-#        r"""
-#        Convenience function to return resolution of camera.
-#        Resolution = (number_horizontal_pixels, number_vertical_pixels)
-#        """
-#        self._resolution = (self.camera.Width.GetValue(), self.camera.Height.GetValue())
-#        return self._resolution
+    @property
+    @drive_basler
+    def resolution(self):
+        r"""
+        Convenience function to return resolution of camera.
+        Resolution = (number_horizontal_pixels, number_vertical_pixels)
+        """
+        self._resolution = (self.camera.Width.GetValue(), self.camera.Height.GetValue())
+        return self._resolution
 
     @property
     @drive_basler

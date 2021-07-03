@@ -2,9 +2,10 @@ import logging
 import math
 logging.basicConfig(level=logging.INFO)
 
-from fslpylon.io.recorders import FFMPEGRecorder, ImgstoreRecorder
-from fslpylon.io.recorders.pipeline import TimeAnnotator, Inverter, FPSAnnotator, Masker, BlackFrameCountAnnotator, FrameCountAnnotator, Overlay
-from fslpylon.io.cameras import OpenCVCamera, BaslerCamera
+from baslerpi.io.recorders import FFMPEGRecorder, ImgstoreRecorder
+from baslerpi.io.recorders.pipeline import TimeAnnotator, Inverter, FPSAnnotator, Masker, BlackFrameCountAnnotator, FrameCountAnnotator, Overlay
+#from baslerpi.io.cameras import OpenCVCamera, BaslerCamera
+from baslerpi.io.cameras import BaslerCamera
 
 from inspect import signature
 import argparse
@@ -12,7 +13,8 @@ import json
 import datetime
 import os.path
 
-CAMERAS = {"OpenCV": OpenCVCamera, "Basler": BaslerCamera}
+#CAMERAS = {"OpenCV": OpenCVCamera, "Basler": BaslerCamera}
+CAMERAS = {"Basler": BaslerCamera}
 camera_choices = list(CAMERAS.keys())
 
 PIPELINES = {
@@ -39,6 +41,7 @@ ap.add_argument("--pipeline", choices = list(PIPELINES.keys()), help="Preprocess
 #ap.add_argument("--invert", dest="invert", action="store_true", default=True)
 #ap.add_argument("--no-invert", dest="invert", action="store_false", default=True)
 ap.add_argument("-D", "--debug", dest="debug", action="store_true")
+ap.add_argument("--preview", action="store_true")
 ap.add_argument("-n", "--dry-run", dest="dry_run", help="Display what would happend but dont actually do it", default=False, action="store_true")
 
 gp = ap.add_mutually_exclusive_group()
@@ -100,7 +103,7 @@ else:
     recorder.build_pipeline(*pipeline)
     recorder.open(
         path=os.path.join(config["videos"]["folder"], OUTPUT),
-        fmt = "h264/avi"
+        fmt = "mjpeg/avi"
     )
     try:
         recorder.start()
