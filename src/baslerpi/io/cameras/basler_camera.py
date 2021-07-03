@@ -227,7 +227,7 @@ class BaslerCameraDLC(BaslerCamera, DLCCamera):
     """
 
     def __init__(self, *args, id=0, resolution="2592x1944", exposure=15000, gain=0,rotate=0, crop=None, fps=30, use_tk_display=False, display_resize=1.0,
-            drop_each=1, max_duration=None, use_wall_clock=True, timeout=5000, count=math.inf, wait_timeout=3000, annotator=None, **kwargs):
+            drop_each=1, max_duration=None, use_wall_clock=True, recording_timeout=math.inf, count=math.inf, timeout=3000, annotator=None, **kwargs):
 
         resolution = resolution.split("x")
 
@@ -236,8 +236,8 @@ class BaslerCameraDLC(BaslerCamera, DLCCamera):
         # this bypasses the __init__ method of BaslerCamera
         # de facto making the BaslerCamera part a composition, not an inheritance
         super(BaslerCamera, self).__init__(
-            *args, drop_each=drop_each, max_duration=max_duration, use_wall_clock=use_wall_clock, timeout=timeout, count=count,
-            wait_timeout=wait_timeout, framerate=fps, width=resolution[0], height=resolution[1], **kwargs
+            *args, drop_each=drop_each, max_duration=max_duration, use_wall_clock=use_wall_clock, recording_timeout=recording_timeout, count=count,
+            timeout=timeout, framerate=fps, width=resolution[0], height=resolution[1], **kwargs
         )
 
 

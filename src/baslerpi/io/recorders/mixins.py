@@ -5,6 +5,8 @@ import time
 import threading
 import queue
 import inspect
+import subprocess
+import os.path
 
 
 logger = logging.getLogger(__name__)
@@ -163,7 +165,6 @@ class ImgstoreMixin:
     """
 
     _dtype = np.uint8
-    _chunksize = 9000
     # look here for possible formats:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
     # Images -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L805
@@ -175,12 +176,15 @@ class ImgstoreMixin:
 
         self._path = path
         self._fmt = fmt
+        self._video_duration_seconds = 300
+        self._chunksize = self._video_duration_seconds * self._framerate
 
         # Report information to user
         logger.info("Initializing Imgstore video with following properties:")
         logger.info("  Resolution: %dx%d", *self.resolution)
         logger.info("  Path: %s", self._path)
         logger.info("  Format (codec): %s", self._fmt)
+        logger.info("  Chunksize: %s", self._chunksize)
 
         kwargs = {"framerate": self._framerate,
                   "mode": 'w',
@@ -192,13 +196,43 @@ class ImgstoreMixin:
 
         self._queue = queue.Queue(maxsize=self._CACHE_SIZE)
         self._stop_queue = queue.Queue()
+        self._last_chunk = -1
         self._async_writer = AsyncWriter(self._fmt, self._queue, self._stop_queue, **kwargs)
         self._async_writer.start()
         self._tqdm = tqdm.tqdm(position=1, total=100, unit="")
 
+
+    def has_new_chunk(self):
+        current_chunk = self._async_writer._video_writer._chunk_n
+        if current_chunk > self._last_chunk:
+            self._last_chunk = current_chunk
+            return True
+        else:
+            return False
+
+    def extract_first_chunk_frame(self, frame=None):
+
+        last_shot_path = os.path.join(self._path, str(self._last_chunk).zfill(6) + ".png")
+        if frame is None:
+            # This seems to not work when the video is running
+            # which actually is every use case
+            files = os.listdir(self._path)
+            extension = "." + self._fmt.split("/")[1]
+            videos = [f for f in files if f[::-1][:4][::-1] == extension]
+            last_video = sorted(videos)[-1]
+            last_video_without_extension = last_video.strip(extension)
+            last_video_n = int(last_video_without_extension)
+            assert last_video_n == self._last_chunk
+            video_path = os.path.join(self._path, last_video)
+            assert os.path.exists(video_path)
+            subprocess.Popen(f"ffmpeg -ss 0.5 -i {video_path} -vframes 1 -f image2 {last_shot_path}".split(" "))
+        else:
+            cv2.imwrite(last_shot_path, frame)
+
     @property
     def usage(self):
         return 100 * self._queue.qsize() / self._CACHE_SIZE
+
 
     def _info(self):
          # logger.info("Usage: {self.usage}%")
@@ -212,6 +246,8 @@ class ImgstoreMixin:
             logger.warning("Lost %5.d frames" % self._lost_frames)
         self._queue.put((frame, i, timestamp))
         #self._async_writer.write(frame, i)
+        if self.has_new_chunk():
+            self.extract_first_chunk_frame(frame)
 
     def close(self):
         logger.info("Quiting recorder...")

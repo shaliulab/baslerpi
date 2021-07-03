@@ -34,7 +34,6 @@ ap.add_argument("--output", help="Path to output video (directory for ImgStore).
 ap.add_argument("--framerate", type=int, default=30, help="Frames Per Second of the camera")
 ap.add_argument("--exposure-time", dest="exposure", type=int, default=25000, help="Exposure time in useconds (10^-6 s)")
 ap.add_argument("--fps", type=int, help="Frames Per Second of the video", required=False)
-ap.add_argument("--timeout", type=int, default=30000, help="Camera tries getting a frame for ms after the last successful trial")
 ap.add_argument("--config", help="Config file in json format", default="/etc/flyhostel.conf")
 ap.add_argument("--verbose", dest="verbose", action="store_true", default=False)
 ap.add_argument("--pipeline", choices = list(PIPELINES.keys()), help="Preprocessing pipeline to be used. For typical data collection, use standard. full will additionally apply a mask, in case you do not wish to include a part of the arena. mask will only do this masking and otherwise leave the input stream untouched.")
@@ -44,7 +43,7 @@ ap.add_argument("--pipeline", choices = list(PIPELINES.keys()), help="Preprocess
 ap.add_argument("-D", "--debug", dest="debug", action="store_true")
 ap.add_argument("--preview", action="store_true")
 ap.add_argument("-n", "--dry-run", dest="dry_run", help="Display what would happend but dont actually do it", default=False, action="store_true")
-
+ap.add_argument("--timeout", type=int, default=30000, help="Camera tries getting a frame for ms after the last successful trial")
 gp = ap.add_mutually_exclusive_group()
 gp.add_argument("--duration", type=int, default=300, help="Camera fetches this amount of frames at max")
 gp.add_argument("--maxframes", type=int, default=math.inf, help="Camera fetches frames (s)")

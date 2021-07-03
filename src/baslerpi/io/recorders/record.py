@@ -71,6 +71,7 @@ class BaseRecorder(threading.Thread):
                 break
 
             self.write(frame, self._framecount, timestamp)
+
             self._framecount += 1
 
 
