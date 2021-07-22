@@ -169,7 +169,9 @@ class ImgstoreMixin:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
     # Images -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L805
     _asyncWriterClass = AsyncWriter
-    _CACHE_SIZE = 1e4
+    # if you dont have enough RAM, you dont want to make this number huge
+    # otherwise you will run out of RAM
+    _CACHE_SIZE = 1e2
 
 
     def open(self, path, fmt="h264/avi", maxframes=None):
@@ -200,7 +202,7 @@ class ImgstoreMixin:
         self._async_writer = AsyncWriter(self._fmt, self._queue, self._stop_queue, **kwargs)
         self._async_writer.start()
         self._tqdm = tqdm.tqdm(position=1, total=100, unit="")
-
+        self._last_cache_accumulated = 0
 
     def has_new_chunk(self):
         current_chunk = self._async_writer._video_writer._chunk_n
@@ -244,7 +246,14 @@ class ImgstoreMixin:
         if self._queue.full():
             self._lost_frames += 1
             logger.warning("Lost %5.d frames" % self._lost_frames)
+
         self._queue.put((frame, i, timestamp))
+
+        cache_size = self._queue.qsize()
+        if cache_size != self._last_cache_accumulated:
+            logger.info(f"{cache_size} frames are accumulated in the cache (max {self._CACHE_SIZE} frames)")
+        self._last_cache_accumulated = cache_size
+
         #self._async_writer.write(frame, i)
         if self.has_new_chunk():
             self.extract_first_chunk_frame(frame)
