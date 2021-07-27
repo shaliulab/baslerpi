@@ -79,7 +79,8 @@ class BaseRecorder(threading.Thread):
                 if not environmental_data is None:
                     self.add_extra_data(
                             temperature=environmental_data["temperature"],
-                            humidity=environmental_data["humidity"]
+                            humidity=environmental_data["humidity"],
+                            light=environmental_data["light"]
                     )
                 last_tick = timestamp
 
