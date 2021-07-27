@@ -89,17 +89,17 @@ if args.sensor is None:
 else:
 
     import urllib.request
-    from socket import timeout
+    from socket import timeout as TimeoutException
 
     class QuerySensor:
         def __init__(self, port):
             self._port = port
 
         def query(self, timeout=1):
-            url = f"https://localhost:{self._port}"
+            url = f"http://localhost:{self._port}"
             try:
                 req = urllib.request.urlopen(url, timeout=timeout)
-            except timeout:
+            except TimeoutException:
                 logging.warning("Sensor timeout")
                 return None
             except Exception:
@@ -107,6 +107,8 @@ else:
 
             data_str = req.read().decode("utf-8")
             data = json.loads(data_str)
+            data["temperature"] = float(data["temperature"])
+            data["humidity"] = float(data["humidity"])
             return data
 
         def get_temperature(self):

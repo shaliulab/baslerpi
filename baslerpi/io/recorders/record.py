@@ -74,10 +74,13 @@ class BaseRecorder(threading.Thread):
 
         for timestamp, frame in self._camera:
 
-            if not self._sensor is None and timestamp > (last_tick + 60000):
-                environmental_data = sensor.query(timeout=1)
+            if not self._sensor is None and timestamp > (last_tick + 5000):
+                environmental_data = self._sensor.query(timeout=1)
                 if not environmental_data is None:
-                    self.add_extra_data(temperature=data["temperature"], humidity=data["humidity"])
+                    self.add_extra_data(
+                            temperature=environmental_data["temperature"],
+                            humidity=environmental_data["humidity"]
+                    )
                 last_tick = timestamp
 
             if self._stop_event.is_set():
