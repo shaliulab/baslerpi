@@ -89,7 +89,7 @@ if args.sensor is None:
 else:
 
     import urllib.request
-    import socket
+    from socket import timeout
 
     class QuerySensor:
         def __init__(self, port):
@@ -99,13 +99,13 @@ else:
             url = f"https://localhost:{self._port}"
             try:
                 req = urllib.request.urlopen(url, timeout=timeout)
-            except urllib2.URLError, e:
-                if isinstance(e.reason, socket.timeout):
-                    return None
-                else:
-                    return None
+            except timeout:
+                logging.warning("Sensor timeout")
+                return None
+            except Exception:
+                return None
 
-            data_str = req.read().decode()
+            data_str = req.read().decode("utf-8")
             data = json.loads(data_str)
             return data
 
