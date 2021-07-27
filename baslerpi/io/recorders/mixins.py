@@ -175,6 +175,7 @@ class ImgstoreMixin:
 
     def add_extra_data(self, temperature, humidity):
         store = self._async_writer._video_writer
+        logger.info("Writing environmental data")
         store.add_extra_data(temperature=temperature, humidity=humidity)
         return 0
 

@@ -84,18 +84,27 @@ print(camera_kwargs)
 camera = CameraClass(**camera_kwargs)
 pipeline = PIPELINES[args.pipeline]
 
-if args.sensor is None
+if args.sensor is None:
     sensor=None
 else:
 
     import urllib.request
+    import socket
+
     class QuerySensor:
         def __init__(self, port):
             self._port = port
 
-        def query(self):
+        def query(self, timeout=1):
             url = f"https://localhost:{self._port}"
-            req = urllib.request.urlopen(url)
+            try:
+                req = urllib.request.urlopen(url, timeout=timeout)
+            except urllib2.URLError, e:
+                if isinstance(e.reason, socket.timeout):
+                    return None
+                else:
+                    return None
+
             data_str = req.read().decode()
             data = json.loads(data_str)
             return data
