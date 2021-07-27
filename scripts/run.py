@@ -44,6 +44,7 @@ ap.add_argument("-D", "--debug", dest="debug", action="store_true")
 ap.add_argument("--preview", action="store_true")
 ap.add_argument("-n", "--dry-run", dest="dry_run", help="Display what would happend but dont actually do it", default=False, action="store_true")
 ap.add_argument("--timeout", type=int, default=30000, help="Camera tries getting a frame for ms after the last successful trial")
+ap.add_argument("--sensor", type=int, default=None)
 gp = ap.add_mutually_exclusive_group()
 gp.add_argument("--duration", type=int, default=300, help="Camera fetches this amount of frames at max")
 gp.add_argument("--maxframes", type=int, default=math.inf, help="Camera fetches frames (s)")
@@ -83,6 +84,32 @@ print(camera_kwargs)
 camera = CameraClass(**camera_kwargs)
 pipeline = PIPELINES[args.pipeline]
 
+if args.sensor is None
+    sensor=None
+else:
+
+    import urllib.request
+    class QuerySensor:
+        def __init__(self, port):
+            self._port = port
+
+        def query(self):
+            url = f"https://localhost:{self._port}"
+            req = urllib.request.urlopen(url)
+            data_str = req.read().decode()
+            data = json.loads(data_str)
+            return data
+
+        def get_temperature(self):
+            data = self.query()
+            return data["temperature"]
+
+        def get_humidity(self):
+            data = self.query()
+            return data["humidity"]
+
+    sensor = QuerySensor(9000)
+
 if args.dry_run:
     print(f"I will open media at {args.video_path} and save it to {OUTPUT}")
     print(f"The camera will run at  {args.framerate} and the video will be saved at {args.fps}")
@@ -99,6 +126,7 @@ else:
         camera,
         framerate=args.fps,
         duration=args.duration, maxframes=args.maxframes,
+        sensor=sensor,
         verbose=args.verbose)
     if pipeline:
         recorder.build_pipeline(*pipeline)

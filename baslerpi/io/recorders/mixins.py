@@ -173,6 +173,10 @@ class ImgstoreMixin:
     # otherwise you will run out of RAM
     _CACHE_SIZE = 1e2
 
+    def add_extra_data(self, temperature, humidity):
+        store = self._async_writer._video_writer
+        store.add_extra_data(temperature=temperature, humidity=humidity)
+        return 0
 
     def open(self, path, fmt="h264/avi", maxframes=None):
 

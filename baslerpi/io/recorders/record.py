@@ -22,7 +22,7 @@ class BaseRecorder(threading.Thread):
     in every iteration and save to a path determined in the open() method
     """
 
-    def __init__(self, camera, *args, compressor=None, framerate=None, duration=300, maxframes=math.inf, verbose=False, **kwargs):
+    def __init__(self, camera, *args, sensor=None, compressor=None, framerate=None, duration=300, maxframes=math.inf, verbose=False, **kwargs):
         """
         Initialize a recorder with framerate equal to FPS of camera
         or alternatively provide a custom framerate
@@ -42,6 +42,7 @@ class BaseRecorder(threading.Thread):
         self._verbose = verbose
         self._stop_event = threading.Event()
         self._pipeline = []
+        self._sensor = sensor
         super().__init__(*args, **kwargs)
 
     @property
@@ -58,6 +59,9 @@ class BaseRecorder(threading.Thread):
     def _info(self):
         raise NotImplementedError
 
+    def add_extra_data(self, *args, **kwargs):
+        return None
+
     def run(self):
         """
         Collect frames from the camera and write them to the video
@@ -67,6 +71,11 @@ class BaseRecorder(threading.Thread):
         self._start_time = time.time()
 
         for timestamp, frame in self._camera:
+
+            if not self._sensor is None:
+                environmental_data = sensor.read()
+                self.add_extra_data(temperature=data["temperature"], humidity=data["humidity"])
+
             if self._stop_event.is_set():
                 break
 
