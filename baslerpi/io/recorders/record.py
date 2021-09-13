@@ -3,6 +3,7 @@ import threading
 import time
 import logging
 import tqdm
+import numpy as np
 
 from .mixins import OpenCVMixin, FFMPEGMixin, ImgstoreMixin
 
@@ -80,9 +81,19 @@ class BaseRecorder(threading.Thread):
                     self.add_extra_data(
                             temperature=environmental_data["temperature"],
                             humidity=environmental_data["humidity"],
-                            light=environmental_data["light"]
+                            light=environmental_data["light"],
+                            time=timestamp
                     )
                 last_tick = timestamp
+
+            else:
+                self.add_extra_data(
+                        temperature=np.nan,
+                        humidity=np.nan,
+                        light=np.nan,
+                        time=timestamp
+                )
+
 
             if self._stop_event.is_set():
                 break
