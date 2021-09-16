@@ -1,0 +1,10 @@
+matplotlib
+pypylon
+numpy
+skvideo
+tqdm
+pyyaml
+cv2
+imgstore
+PIL
+genicam

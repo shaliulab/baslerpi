@@ -7,6 +7,7 @@ import queue
 import inspect
 import subprocess
 import os.path
+import traceback
 
 
 logger = logging.getLogger(__name__)
@@ -176,7 +177,17 @@ class ImgstoreMixin:
     def add_extra_data(self, **kwargs):
         store = self._async_writer._video_writer
         logger.info("Writing environmental data")
-        store.add_extra_data(**kwargs)
+        try:
+            store.add_extra_data(**kwargs)
+        except ValueError as error:
+            logger.error(f"Cannot save extra data on chunk {store._chunk_n}. See more details following this message. I will try to recover from it")
+            logger.error(error)
+            logger.error(traceback.print_exc())
+        except Exception as error:
+            logger.error("Unknown error. See more details following this message")
+            logger.error(error)
+            logger.error(traceback.print_exc())
+            
         return 0
 
     def open(self, path, fmt="h264/avi", maxframes=None):
