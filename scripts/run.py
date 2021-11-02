@@ -13,6 +13,7 @@ from baslerpi.io.recorders import FFMPEGRecorder, ImgstoreRecorder
 from baslerpi.io.recorders.pipeline import TimeAnnotator, Inverter, FPSAnnotator, Masker, BlackFrameCountAnnotator, FrameCountAnnotator, Overlay
 from baslerpi.io.cameras import BaslerCamera
 from baslerpi.core.base import *
+import baslerpi
 
 CAMERAS = {"Basler": BaslerCamera}
 
