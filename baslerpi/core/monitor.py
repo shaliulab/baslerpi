@@ -59,8 +59,6 @@ metadata = {
     }
 
 
-
-
 recorder.open(
     filename = os.path.join(output_dir, f"{filename}.avi"),
     **metadata
