@@ -35,11 +35,11 @@ class BaslerCamera(BaseCamera):
     close():       Close the camera
     """
 
-    def __init__(self, *args, init_now=True, **kwargs):
+    def __init__(self, *args, init_now=True, width=None, height=None, framerate=None, exposure=None, **kwargs):
         self.camera = None
         if init_now:
             self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, width=width, height=height, framerate=framerate, exposure=exposure, **kwargs)
 
     def is_last_frame(self):
         # TODO
@@ -52,8 +52,8 @@ class BaslerCamera(BaseCamera):
         return self.camera.IsOpen()
 
     def configure(self):
-        self.exposuretime = self._target_exposuretime
         self.camera.AcquisitionFrameRateEnable.SetValue(True)
+        self.exposuretime = self._target_exposuretime
         time.sleep(1)
         self.framerate = self._target_framerate
         self._report()
@@ -185,10 +185,15 @@ class BaslerCamera(BaseCamera):
     @framerate.setter
     @drive_basler
     def framerate(self, framerate):
+
         # logger.info("Setting framerate to %s", str(framerate))
         try:
-            self.camera.AcquisitionFrameRate.SetValue(framerate)
-            self._framerate = framerate
+
+            if not framerate is None:
+                self.camera.AcquisitionFrameRate.SetValue(framerate)
+                logger.info("Setting framerate to %3.f", framerate)
+
+            self._framerate = float(self.camera.AcquisitionFrameRate.GetValue())
         except Exception as error:
             logger.warning("Error in framerate setter")
             logger.warning(error)
@@ -204,16 +209,17 @@ class BaslerCamera(BaseCamera):
     @exposuretime.getter
     @drive_basler
     def exposuretime(self):
-        float(self.camera.ExposureTime.GetValue())
         return self._exposuretime
 
     @exposuretime.setter
     @drive_basler
     def exposuretime(self, exposuretime):
         try:
-            self.camera.ExposureTime.SetValue(exposuretime)
-            self._exposuretime = exposuretime
-            logger.info("Setting exposure time to %3.f", exposuretime)
+            if not exposuretime is None:
+                self.camera.ExposureTime.SetValue(exposuretime)
+                logger.info("Setting exposure time to %3.f", exposuretime)
+            self._exposuretime = float(self.camera.ExposureTime.GetValue())
+
 
         except Exception as error:
             logger.warning(error)

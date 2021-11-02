@@ -164,7 +164,7 @@ class BaseCamera:
 
     def _report(self):
         logger.debug(f"Actual framerate = {self.framerate}")
-        logger.debug(f"Acutal exposure time = {self.exposuretime}")
+        logger.debug(f"Actual exposure time = {self.exposuretime}")
 
     def is_last_frame(self):
         raise NotImplementedError
