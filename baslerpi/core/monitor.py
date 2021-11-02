@@ -2,7 +2,8 @@ import argparse
 import datetime
 import logging
 import os.path
-
+import sys
+from .base import *
 
 logger = logging.getLogger(__name__)
 import cv2
@@ -44,8 +45,25 @@ else:
     compressor = None
 recorder = Recorder(camera, compressor=compressor,**recorder_kwargs)
 
+
+answer = input("Add now any metadata that needs to be entered manually: ")
+
+metadata = {
+    "exposure-time": camera.exposuretime,
+    "notes": answer,
+    "python-version": sys.version,
+    "baslerpi-version": baslerpi.__version__,
+    "imgstore-version": imgstore.__version__, # for imgstore writer
+    "skvideo-version": skvideo.__version__, # for ffmpeg writer
+    "cv2-version": cv2.__version__
+    }
+
+
+
+
 recorder.open(
-    filename = os.path.join(output_dir, f"{filename}.avi")
+    filename = os.path.join(output_dir, f"{filename}.avi"),
+    **metadata
 )
 
 try:

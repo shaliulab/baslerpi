@@ -190,7 +190,7 @@ class ImgstoreMixin:
             
         return 0
 
-    def open(self, path, fmt="h264/avi", maxframes=None):
+    def open(self, path, fmt="h264/avi", maxframes=None, **kwargs):
 
         self._path = path
         self._fmt = fmt
@@ -204,18 +204,21 @@ class ImgstoreMixin:
         logger.info("  Format (codec): %s", self._fmt)
         logger.info("  Chunksize: %s", self._chunksize)
 
-        kwargs = {"framerate": self._framerate,
-                  "mode": 'w',
-                  "basedir": self._path,
-                  "imgshape": self.resolution[::-1], # reverse order so it becomes nrows x ncols i.e. height x width
-                  "imgdtype": self._dtype,
-                  "chunksize": self._chunksize
-                  }
+        imgstore_kwargs = {
+            "framerate": self._framerate,
+            "mode": 'w',
+            "basedir": self._path,
+            "imgshape": self.resolution[::-1], # reverse order so it becomes nrows x ncols i.e. height x width
+            "imgdtype": self._dtype,
+            "chunksize": self._chunksize,
+        }
+                
+        imgstore_kwargs.update(kwargs)
 
         self._queue = queue.Queue(maxsize=self._CACHE_SIZE)
         self._stop_queue = queue.Queue()
         self._last_chunk = -1
-        self._async_writer = AsyncWriter(self._fmt, self._queue, self._stop_queue, **kwargs)
+        self._async_writer = AsyncWriter(self._fmt, self._queue, self._stop_queue, **imgstore_kwargs)
         self._async_writer.start()
         self._tqdm = tqdm.tqdm(position=1, total=100, unit="")
         self._last_cache_accumulated = 0
