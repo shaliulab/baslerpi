@@ -7,12 +7,12 @@ import json
 import datetime
 import yaml
 import os.path
-
+import sys
 
 from baslerpi.io.recorders import FFMPEGRecorder, ImgstoreRecorder
 from baslerpi.io.recorders.pipeline import TimeAnnotator, Inverter, FPSAnnotator, Masker, BlackFrameCountAnnotator, FrameCountAnnotator, Overlay
 from baslerpi.io.cameras import BaslerCamera
-
+from baslerpi.core.base import *
 
 CAMERAS = {"Basler": BaslerCamera}
 
@@ -65,10 +65,6 @@ def main(args = None):
             logging.config.dictConfig(logging_config)
         except yaml.YAMLError as error:
             print(error)
-
-
-            
-
 
     if args is None:
         ap = get_parser()
@@ -167,9 +163,24 @@ def main(args = None):
             verbose=args.verbose)
         if pipeline:
             recorder.build_pipeline(*pipeline)
+
+        answer = input("Add now any metadata that needs to be entered manually: ")
+
+        metadata = {
+            "exposure-time": camera.exposuretime,
+            "notes": answer,
+            "python-version": sys.version,
+            "baslerpi-version": baslerpi.__version__,
+            "imgstore-version": imgstore.__version__, # for imgstore writer
+            "skvideo-version": skvideo.__version__, # for ffmpeg writer
+            "cv2-version": cv2.__version__
+            }
+
+
         recorder.open(
             path=os.path.join(config["videos"]["folder"], OUTPUT),
-            fmt = "mjpeg/avi"
+            fmt = "mjpeg/avi",
+            **metadata
         )
         try:
             recorder.start()
