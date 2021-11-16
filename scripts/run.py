@@ -26,10 +26,12 @@ PIPELINES = {
     "black-framecount": [BlackFrameCountAnnotator],
     "none": []
 }
- 
+
+camera_choices = list(CAMERAS.keys())
+
+
 def get_parser():
 
-    camera_choices = list(CAMERAS.keys())
     
    
     ap = argparse.ArgumentParser()
