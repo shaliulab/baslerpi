@@ -38,8 +38,8 @@ def get_parser():
     ap.add_argument("camera", choices=camera_choices)
     ap.add_argument("--input", dest="video_path", help="If using OpenCV camera, path to video or 0 for webcam input")
     ap.add_argument("--output", help="Path to output video (directory for ImgStore). It will be placed in the video folder as stated in the config file. See --config")
-    ap.add_argument("--framerate", type=int, default=30, help="Frames Per Second of the camera")
-    ap.add_argument("--exposure-time", dest="exposure", type=int, default=25000, help="Exposure time in useconds (10^-6 s)")
+    ap.add_argument("--framerate", type=int, help="Frames Per Second of the camera")
+    ap.add_argument("--exposure-time", dest="exposure", type=int, help="Exposure time in useconds (10^-6 s)")
     ap.add_argument("--fps", type=int, help="Frames Per Second of the video", required=False)
     ap.add_argument("--config", help="Config file in json format", default="/etc/flyhostel.conf")
     ap.add_argument("--verbose", dest="verbose", action="store_true", default=False)
@@ -99,7 +99,7 @@ def main(args = None):
     for cls in CameraClass.__bases__:
         keys = keys + list(signature(cls).parameters.keys())
     
-    camera_kwargs = {k: getattr(args, k) for k in vars(args) if k in keys}
+    camera_kwargs = {k: getattr(args, k) for k in vars(args) if (k in keys and not getattr(args, k) is None)}
     
     logging.debug("This are the camera kwargs:")
 
