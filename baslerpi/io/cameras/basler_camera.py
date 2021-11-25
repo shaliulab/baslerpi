@@ -23,7 +23,7 @@ logger.addHandler(console)
 
 class BaslerCamera(BaseCamera):
 
-    _max_failed_count = 5
+    _MAX_FAILED_COUNT = 5
 
     r"""
     Drive a Basler camera using pypylon.
@@ -34,12 +34,6 @@ class BaslerCamera(BaseCamera):
     _next_image(): Fetch next frame. Called by the __iter__ method of abstract class
     close():       Close the camera
     """
-
-    def __init__(self, *args, init_now=True, **kwargs):
-        self.camera = None
-        if init_now:
-            self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-        super().__init__(*args, **kwargs)
 
     def is_last_frame(self):
         # TODO
@@ -52,11 +46,28 @@ class BaslerCamera(BaseCamera):
         return self.camera.IsOpen()
 
     def configure(self):
+        """
+        Set the exposure time and the framerate of the camera
+        to the attributes of the class
+        """
         self.exposuretime = self._target_exposuretime
-        self.camera.AcquisitionFrameRateEnable.SetValue(True)
-        time.sleep(1)
         self.framerate = self._target_framerate
-        self._report()
+
+
+    def grab(self):
+        
+        grabResult = self.camera.RetrieveResult(self._timeout, pylon.TimeoutHandling_ThrowException)
+        status = grabResult.GrabSucceeded()
+        if status:
+            img = grabResult.Array
+            grabResult.Release()
+        else:
+            img = None
+            self.failed_count += 1
+            logger.debug("Pylon could not fetch next frame. Trial no %d", failed_count)
+
+        return status, img
+
 
     def open(self, maxframes=None, buffersize=5):
         """
@@ -67,26 +78,22 @@ class BaslerCamera(BaseCamera):
         try:
             if not getattr(self, "camera", False):
                 self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-
             self.camera.Open()
             self.configure()
+            self.report()
+
             # Print the model name of the camera.
             logger.info("Using device %s", self.camera.GetDeviceInfo().GetModelName())
-
-            if maxframes is None:
-                pass
-            else:
+            if maxframes is not None:
                 self.camera.StartGrabbingMax(maxframes) # if we want to limit the number of frames
 
             self.camera.MaxNumBuffer = buffersize
             self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
-            grabResult = self.camera.RetrieveResult(self._timeout, pylon.TimeoutHandling_ThrowException)
-            image = grabResult.Array
-
+            
+            _, img = self.grab()
             logger.info("Pylon camera opened successfully")
             self._start_time = time.time()
-            logger.info("Resolution of incoming frames: %dx%d", image.shape[1], image.shape[0])
-            self.configure()
+            logger.info("Resolution of incoming frames: %dx%d", img.shape[1], img.shape[0])
 
         except Exception as error:
             logger.error("Cannot open camera. See error trace below")
@@ -99,7 +106,7 @@ class BaslerCamera(BaseCamera):
     def _next_image(self):
         """
         Try to get the next frame
-        up to _max_failed_count times in a row
+        up to _MAX_FAILED_COUNT times in a row
         Return a np.array of the image
         """
         failed_count = 0
@@ -107,43 +114,27 @@ class BaslerCamera(BaseCamera):
         # not to be run continuosly
         # i.e. in normal conditions, it should be broken every time
         # the continously running loop is implemented BaseCamera.__iter__
-
-        while self.camera.IsGrabbing() and failed_count < self._max_failed_count:
+        while self.camera.IsGrabbing() and self.failed_count < self._MAX_FAILED_COUNT:
 
             grabResult = None
 
             # logger.warning('Input framerate is %s', str(self.framerate))
             try:
-                grabResult = self.camera.RetrieveResult(self._timeout, pylon.TimeoutHandling_ThrowException)
-                status = grabResult.GrabSucceeded()
+                status, img = self.grab()
+                if status:
+                    return img
+                
+                elif self.failed_count >= self._MAX_FAILED_COUNT:
+                    message = f"Tried reading next frame {self._MAX_FAILED_COUNT} times and none worked. Exiting."
+                    logger.warning(message)
+                    return None
 
             except KeyboardInterrupt:
-                return 0
+                return None
 
             except Exception as error:
                 logger.error(error)
                 logger.warning(traceback.print_exc())
-                failed_count += 1
-                status = False
-
-            if status:
-                #image = self._converter.Convert(grabResult)
-                #img = image.GetArray()
-                img = grabResult.Array
-                grabResult.Release()
-                return img
-
-            else:
-                failed_count += 1
-                logger.debug("Pylon could not fetch next frame. Trial no %d", failed_count)
-                if grabResult:
-                    grabResult.Release()
-
-
-        if failed_count >= self._max_failed_count:
-            message = f"Tried reading next frame {self._max_failed_count} times and none worked. Exiting."
-            logger.warning(message)
-            self.close()
 
 
     # called by BaseCamera.__exit__()
@@ -185,7 +176,10 @@ class BaslerCamera(BaseCamera):
     @framerate.setter
     @drive_basler
     def framerate(self, framerate):
-        # logger.info("Setting framerate to %s", str(framerate))
+        
+        if not self.camera.AcquisitionFrameRateEnable.GetValue():
+            self.camera.AcquisitionFrameRateEnable.SetValue(True)
+
         try:
             self.camera.AcquisitionFrameRate.SetValue(framerate)
             self._framerate = framerate
@@ -221,106 +215,50 @@ class BaslerCamera(BaseCamera):
             logger.warning("Error in exposuretime setter")
 
 
-class BaslerCameraDLC(BaslerCamera, DLCCamera):
+def get_parser(ap=None):
+
+    if ap is None:
+        ap = argparse.ArgumentParser()
+        ap.add_argument("--framerate", type=int, default=30, help="Frames Per Second of the camera")
+        ap.add_argument("--exposure-time", dest="exposure", type=int, default=25000, help="Exposure time in useconds (10^-6 s)")
+    return ap
+
+
+def get_dynamic_camera_kwargs(args):
+
     """
-    A clone of BaslerCamera where its arguments are explicit and not inherited from abstract classes
+    Filter the input args so only kwargs of the BaslerCamera class init
+    or any of its parents are returned
     """
 
-    def __init__(self, *args, id=0, resolution="2592x1944", exposure=15000, gain=0,rotate=0, crop=None, fps=30, use_tk_display=False, display_resize=1.0,
-            drop_each=1, max_duration=None, use_wall_clock=True, recording_timeout=math.inf, count=math.inf, timeout=3000, annotator=None, **kwargs):
+    keys = list(signature(BaslerCamera).parameters.keys())
+    for cls in BaslerCamera.__bases__:
+        keys = keys + list(signature(cls).parameters.keys())
+    
+    camera_kwargs = {k: getattr(args, k) for k in vars(args) if k in keys}
+    return camera_kwargs
 
-        resolution = resolution.split("x")
+def setup_camera(args=None):
+    
+    camera_kwargs = {"framerate": args.framerate, "exposure": args.exposure}
+    camera = BaslerCamera(**camera_kwargs)
+    return camera
 
-        DLCCamera.__init__(self, id, resolution=resolution, exposure=exposure, gain=gain, rotate=rotate, crop=crop, fps=fps, use_tk_display=use_tk_display, display_resize=display_resize)
+def main(args=None, ap=None):
+    """
+    Initialize a BaslerCamera
+    """
 
-        # this bypasses the __init__ method of BaslerCamera
-        # de facto making the BaslerCamera part a composition, not an inheritance
-        super(BaslerCamera, self).__init__(
-            *args, drop_each=drop_each, max_duration=max_duration, use_wall_clock=use_wall_clock, recording_timeout=recording_timeout, count=count,
-            timeout=timeout, framerate=fps, width=resolution[0], height=resolution[1], **kwargs
-        )
+    if args is None:
+        ap = get_parser()
+        ap.add_argument("--maxframes", default=5, help="Number of frames to be acquired")
+        args = ap.parse_args()
 
-
-    def __getstate__(self):
-        d=self.__dict__
-        attrs = dict(d)
-        camera=attrs.pop("camera", None)
-        return attrs
-
-    def __setstate__(self, d):
-        self.__dict__ = d
-
-    def configure(self):
-        super().configure()
-        return True
-
-    def set_capture_device(self):
-        return self.open()
-
-    def close_capture_device(self):
-        return self.close()
-
-    @staticmethod
-    def arg_restrictions():
-        arg_restrictions = {"use_wall_clock": [True, False]}
-        return arg_restrictions
-
-
-    def get_image(self):
-        frame = self._next_image()
-        if self.crop is not None:
-            frame = frame[self.crop[2]:self.crop[3], self.crop[0]:self.crop[1]]
-
-        if len(frame.shape) == 2 or frame.shape[2] == 1:
-            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-        return frame
-
-
-class BaslerCameraDLCCompatibility(BaslerCameraDLC):
-
-    def __init__(self, *args, **kwargs):
-
-        if "framerate" in kwargs:
-            kwargs["fps"] = int(kwargs.pop("framerate") or 30)
-
-        if "height" in kwargs and "width" in kwargs:
-            kwargs["resolution"] = "x".join([str(kwargs.pop("width") or 2592), str(kwargs.pop("height" or 1944))])
-
-        if "shutter" in kwargs:
-            kwargs["exposure"] = int(kwargs.pop("shutter", 15000))
-
-
-        if "iso" in kwargs:
-            kwargs["gain"] = int(kwargs.pop("iso") or 0)
-        
-        print("Loading camera...")        
-        super().__init__(*args, **kwargs)
-
-    def close(self):
-         print("Closing camera...")
-         super().close()
-
-    def open(self):
-        print("Opening camera...")
-        return super().open()
-
+    camera = setup_camera(args)
+    camera.open(maxframes=getattr(args, "maxframes", 5))
+    for timestamp, frame in self.camera:
+        print(t, frame.shape, frame.dtype)
 
 
 if __name__ == "__main__":
-
-    camera = BaslerCamera()
-    camera.open()
-    i = 0
-    for t, img in camera:
-        print("Resolution of incoming frames")
-        print(img.shape[::-1])
-        print("Timestamp")
-        print(t)
-        i += 1
-        if i == 5:
-            break
-
-    camera.close()
-
-
-
+    main()

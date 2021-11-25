@@ -5,7 +5,8 @@ import logging
 import tqdm
 import numpy as np
 
-from .mixins import OpenCVMixin, FFMPEGMixin, ImgstoreMixin
+from baslerpi.io.recorders.mixins import OpenCVMixin, FFMPEGMixin, ImgstoreMixin
+from baslerpi.web_utils.sensor import QuerySensor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -22,8 +23,13 @@ class BaseRecorder(threading.Thread):
     Take an iterable camera object which returns (timestamp, frame)
     in every iteration and save to a path determined in the open() method
     """
+    
+    EXTRA_DATA_FREQ = 5000 # ms
+    INFO_FREQ = 60 # s
 
-    def __init__(self, camera, *args, sensor=None, compressor=None, framerate=None, duration=300, maxframes=math.inf, verbose=False, **kwargs):
+    def __init__(self, camera, *args, sensor=None, compressor=None, framerate=None, duration=300, maxframes=math.inf, verbose=False, 
+                encoder="libx264", crf="18",
+                **kwargs):
         """
         Initialize a recorder with framerate equal to FPS of camera
         or alternatively provide a custom framerate
@@ -32,7 +38,6 @@ class BaseRecorder(threading.Thread):
         self._camera = camera
         if framerate is None:
             framerate = camera._framerate
-            print(framerate)
         self._framerate = framerate
         self._framecount = 0
         self._duration = duration
@@ -44,7 +49,18 @@ class BaseRecorder(threading.Thread):
         self._stop_event = threading.Event()
         self._pipeline = []
         self._sensor = sensor
+        
+        # only for FFMPEGRecorder
+        self._encoder = encoder
+        self._crf = crf
+
+        self.last_tick = 0
         super().__init__(*args, **kwargs)
+
+
+    @property
+    def camera(self):
+        return self._camera
 
     @property
     def resolution(self):
@@ -60,8 +76,13 @@ class BaseRecorder(threading.Thread):
     def _info(self):
         raise NotImplementedError
 
-    def add_extra_data(self, *args, **kwargs):
+    def save_extra_data(self, *args, **kwargs):
         return None
+
+    def writeFrame(frame, timestamp):
+        self.write(frame, self._framecount, timestamp)
+        self._framecount += 1
+
 
     def run(self):
         """
@@ -70,50 +91,34 @@ class BaseRecorder(threading.Thread):
         """
 
         self._start_time = time.time()
-        last_tick = 0
 
+        for timestamp, frame in self.camera:
 
-        for timestamp, frame in self._camera:
-
-            if not self._sensor is None and timestamp > (last_tick + 5000):
-                environmental_data = self._sensor.query(timeout=1)
-                if not environmental_data is None:
-                    self.add_extra_data(
-                            temperature=environmental_data["temperature"],
-                            humidity=environmental_data["humidity"],
-                            light=environmental_data["light"],
-                            time=timestamp
-                    )
-                last_tick = timestamp
-
-            else:
-                self.add_extra_data(
-                        temperature=np.nan,
-                        humidity=np.nan,
-                        light=np.nan,
-                        time=timestamp
-                )
-
-
-            if self._stop_event.is_set():
+            if self.should_stop:
                 break
-
-            self.write(frame, self._framecount, timestamp)
-
-            self._framecount += 1
-
-
-            if self._framecount % (1*60) == 0 and self._verbose:
-                #logger.info("Saved %d frames", self._framecount)
+                
+            self.save_extra_data(timestamp)
+            self.writeFrame(frame, timestamp)
+            if self._framecount % (self.INFO_FREQ) == 0 and self._verbose:
                 self._info()
 
-            running_for_seconds = time.time() - self._start_time
+    
+    @property
+    def should_stop(self):
 
-            if self._duration < running_for_seconds:
-                break
+        duration_reached = self.running_for_seconds >= self._duration
+        return duration_reached or self.max_frames_reached or self._stop_event.is_set()
 
-            if self._framecount == self._maxframes or self._stop_event.is_set():
-                break
+
+    @property
+    def running_for_seconds(self):
+        return time.time() - self._start_time
+
+
+    @property
+    def max_frames_reached(self):
+        return self._framecount >= self._maxframes
+
 
     def build_pipeline(self, *args):
         messg = "Defined pipeline:\n"
@@ -134,12 +139,6 @@ class BaseRecorder(threading.Thread):
 
 class FFMPEGRecorder(FFMPEGMixin, BaseRecorder):
 
-    def __init__(self, *args, encoder="libx264", crf="18", **kwargs):
-
-        self._encoder = encoder
-        self._crf = crf
-        super().__init__(*args, **kwargs)
-
     @property
     def outputdict(self):
         return {
@@ -154,51 +153,81 @@ class FFMPEGRecorder(FFMPEGMixin, BaseRecorder):
            "-t": str(self._duration)
         }
 
+
 class ImgstoreRecorder(ImgstoreMixin, BaseRecorder):
     def __init__(self, *args, **kwargs):
         self._lost_frames = 0
         super().__init__(*args, **kwargs)
 
-if __name__ == "__main__":
 
-    import argparse
-    import datetime
-    import os.path
+RECORDERS = {
+    "FFMPEG": FFMPEGRecorder,
+    "ImgStore": ImgstoreRecorder,
+    "OpenCV": BaseRecorder
+}
 
-    ap = argparse.ArgumentParser()
 
-    ap.add_argument("--output-dir", type=str, default="/1TB/Cloud/Lab/Projects/FlyBowl/videos")
-    ap.add_argument("--duration", type=int, help = "(s)")
+def get_parser(ap=None):
+
+    if ap is None:
+        ap = argparse.ArgumentParser()
+
+    ap.add_argument("--output",
+        default=datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+        help="Path to output video (directory for ImgStore). It will be placed in the video folder as stated in the config file. See --config"
+    )
+    ap.add_argument("--fps", type=int, help="Frames Per Second of the video", required=False)
+    ap.add_argument("--sensor", type=int, default=None)
+    gp = ap.add_mutually_exclusive_group()
+    gp.add_argument("--duration", type=int, default=300, help="Camera fetches this amount of frames at max")
+    gp.add_argument("--maxframes", type=int, default=math.inf, help="Camera fetches frames (s)")
     ap.add_argument("--encoder", type=str)
     ap.add_argument("--crf", type=int)
+    ap.add_argument("--recorder", choices=list(RECORDERS.keys()), default="ImgStore")
+    ap.add_argument("--verbose", dest="verbose", action="store_true", default=False)
+    return ap
 
-    args = vars(ap.parse_args())
 
-    output_dir = args["output_dir"]
-    crf = args["crf"]
-    encoder = args["encoder"]
-    duration = args["duration"]
+def setup_sensor(args):
+    if args.sensor is None:
+        sensor=None
+    else:
+        sensor = QuerySensor(args.sensor)
+    return sensor
 
-    recorder_kwargs = {k: args[k] for k in args.keys() if k in ["duration", "encoder", "crf"] and args[k] is not None}
-    print(recorder_kwargs)
 
-    filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    print(filename)
+def setup_recorder(args):
 
-    camera = BaslerCamera(framerate=30)
-    camera.open()
-    print(camera)
-    recorder = FFMPEGRecorder(camera, **recorder_kwargs)
-    recorder.open(
-        path = os.path.join(output_dir, f"{filename}.avi")
+    RecorderClass = RECORDERS[args.recorder]
+    sensor = setup_sensor(args)
+
+    recorder = RecorderClass(
+        camera,
+        framerate=args.fps,
+        duration=args.duration,
+        maxframes=args.maxframes,
+        sensor=sensor,
+        crf=args.crf,
+        encoder=args.encoder,
+        verbose=args.verbose
     )
-    try:
-        recorder.start()
-        recorder.join()
-    except KeyboardInterrupt:
-        recorder._stop_event.set()
-        logger.info("Quitting...")
 
+    return recorder
+
+def main(args=None, ap=None):
+
+    if args is None:
+        ap = get_parser(ap)
+        args = ap.parse_args()
+
+    output = args.output
+
+    recorder = setup_recorder(args)
+    recorder.open(path = output)
+    recorder.start()
+    recorder.join()
     recorder.close()
-    camera.close()
 
+
+if __name__ == "__main__":
+    main()

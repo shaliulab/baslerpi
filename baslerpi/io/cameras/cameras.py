@@ -17,8 +17,8 @@ from baslerpi.utils import read_config_yaml
 
 class BaseCamera:
 
-    def __init__(self, width=1280, height=960, framerate=30, exposure=15000, iso=0, drop_each=1, colfx="128:128", max_duration=None,
-        use_wall_clock=False, recording_timeout=math.inf, count=math.inf, timeout=30000, preview=False, annotator=None
+    def __init__(self, width=1280, height=960, framerate=30, exposure=15000, iso=0, drop_each=1,
+        use_wall_clock=False, timeout=30000, preview=False
     ):
         """
         The template class to generate and use video streams.
@@ -45,7 +45,6 @@ class BaseCamera:
 
 
         :param drop_each: keep only ``1/drop_each``'th frame
-        :param max_duration: stop the video stream if ``t > max_duration`` (in seconds).
         :param args: additional arguments
         :param kwargs: additional keyword arguments
         """
@@ -53,8 +52,6 @@ class BaseCamera:
         self._width = width
         self._height = height
         self._iso = iso
-
-        self._max_duration = max_duration
         self.stopped = False
         self._frame_idx = 0
         self._shape = (None, None)
@@ -67,16 +64,10 @@ class BaseCamera:
         self._exposuretime = 0
         self._drop_each = drop_each
         self._timeout = timeout
-        self._recording_timeout = recording_timeout 
-        self._annotator = annotator
         self._count = 0
         self._preview = preview
-        self._maxcount = count
+        self.failed_count = 0
 
-    def annotate(self, frame):
-        if self._annotator:
-            frame = self._annotator.annotate(frame)
-        return frame
 
     def time_stamp(self):
         if self._start_time is None:
@@ -110,8 +101,7 @@ class BaseCamera:
         :rtype: (int, :class:`~numpy.ndarray`)
         """
         at_least_one_frame = False
-        tick = 0
-
+      
         while not self.stopped:
             if self.is_last_frame() or not self.is_open():
                 if not at_least_one_frame:
@@ -119,34 +109,17 @@ class BaseCamera:
                 break
             time_s, out = self._next_time_image()
 
-            out = self.annotate(out)
             if out is None:
                 break
+
             t_ms = int(1000 * time_s)
             at_least_one_frame = True
-
-            if self._count  > self._maxcount:
-                print("Breaking")
-                break
 
             if (self._frame_idx % self._drop_each) == 0:
                 logger.debug("Yielding frame")
                 self._count += 1
-                if int(time_s) > tick:
-                    tick = int(time_s)
-                    self._computed_framerate = self._count
-                    logger.info(f"Computed framerate: {self._computed_framerate}")
-                    self._count = 0
-
-                    if self._preview:
-                        import cv2
-                        cv2.imshow("preview", out)
-                        cv2.waitKey(1)
                 yield t_ms, out
 
-            if (self._recording_timeout is not None and self._recording_timeout != 0) and t_ms > self._recording_timeout:
-                logger.debug(f"Timeout ({self._recording_timeout}) ms reached. Terminating camera...")
-                break
 
     @property
     def computed_framerate(self):
@@ -162,7 +135,7 @@ class BaseCamera:
         print(f"Initialized {self.__class__.__name__}")
         self._report()
 
-    def _report(self):
+     def report(self):
         logger.debug(f"Actual framerate = {self.framerate}")
         logger.debug(f"Acutal exposure time = {self.exposuretime}")
 

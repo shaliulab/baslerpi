@@ -174,7 +174,8 @@ class ImgstoreMixin:
     # otherwise you will run out of RAM
     _CACHE_SIZE = 1e2
 
-    def add_extra_data(self, **kwargs):
+
+    def _save_extra_data(self, **kwargs):
         store = self._async_writer._video_writer
         logger.info("Writing environmental data")
         try:
@@ -189,6 +190,29 @@ class ImgstoreMixin:
             logger.error(traceback.print_exc())
             
         return 0
+
+
+    def save_extra_data(self, timestamp):
+
+        if self._sensor is not None and timestamp > (self.last_tick + self.EXTRA_DATA_FREQ):
+            environmental_data = self._sensor.query(timeout=1)
+            if environmental_data is not None:
+                self._save_extra_data(
+                        temperature=environmental_data["temperature"],
+                        humidity=environmental_data["humidity"],
+                        light=environmental_data["light"],
+                        time=timestamp
+                )
+            self.last_tick = timestamp
+
+        else:
+            self._save_extra_data(
+                    temperature=np.nan,
+                    humidity=np.nan,
+                    light=np.nan,
+                    time=timestamp
+            )
+
 
     def open(self, path, fmt="h264/avi", maxframes=None):
 
@@ -278,3 +302,4 @@ class ImgstoreMixin:
         logger.info("Quiting recorder...")
         self._stop_queue.put("STOP")
         #self._video_writer.close()
+        self.camera.close()
