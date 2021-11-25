@@ -314,8 +314,11 @@ def main(args=None, ap=None):
     camera = setup_camera(args)
     camera.open(maxframes=args.maxframes)
 
-    for timestamp, frame in camera:
-        print("Basler camera: ", timestamp, frame.shape, frame.dtype, camera.computed_framerate)
+    try:
+        for timestamp, frame in camera:
+            print("Basler camera: ", timestamp, frame.shape, frame.dtype, camera.computed_framerate)
+    except KeyboardInterrupt:
+        return
 
 
 if __name__ == "__main__":
