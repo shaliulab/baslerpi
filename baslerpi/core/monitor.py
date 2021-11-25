@@ -59,16 +59,13 @@ metadata = {
     "notes": answer,
     "python-version": sys.version,
     "baslerpi-version": baslerpi.__version__,
-    "imgstore-version": imgstore.__version__, # for imgstore writer
-    "skvideo-version": skvideo.__version__, # for ffmpeg writer
-    "cv2-version": cv2.__version__
-    }
+    "imgstore-version": imgstore.__version__,  # for imgstore writer
+    "skvideo-version": skvideo.__version__,  # for ffmpeg writer
+    "cv2-version": cv2.__version__,
+}
 
 
-recorder.open(
-    filename = os.path.join(output_dir, f"{filename}.avi"),
-    **metadata
-)
+recorder.open(filename=os.path.join(output_dir, f"{filename}.avi"), **metadata)
 
 try:
     recorder.start()

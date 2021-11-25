@@ -189,7 +189,6 @@ class ImgstoreMixin:
 
         return 0
 
-
     def save_extra_data(self, timestamp):
 
         if self._sensor is not None and timestamp > (

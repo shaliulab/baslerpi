@@ -202,7 +202,9 @@ class BaslerCamera(BaseCamera):
                 self.camera.AcquisitionFrameRate.SetValue(framerate)
                 logger.info("Setting framerate to %3.f", framerate)
 
-            self._framerate = float(self.camera.AcquisitionFrameRate.GetValue())
+            self._framerate = float(
+                self.camera.AcquisitionFrameRate.GetValue()
+            )
         except Exception as error:
             logger.warning("Error in framerate setter")
             logger.warning(error)
@@ -226,7 +228,6 @@ class BaslerCamera(BaseCamera):
                 self.camera.ExposureTime.SetValue(exposuretime)
                 logger.info("Setting exposure time to %3.f", exposuretime)
             self._exposuretime = float(self.camera.ExposureTime.GetValue())
-
 
         except Exception as error:
             logger.warning(error)

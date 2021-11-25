@@ -25,9 +25,9 @@ with open(f"{PACKAGE_NAME}/_version.py", "w") as fh:
 setup(
     name=PACKAGE_NAME,
     version=version,
-    #description="High resolution monitoring of Drosophila",
-    #long_description=README,
-    #long_description_content_type="text/markdown",
+    # description="High resolution monitoring of Drosophila",
+    # long_description=README,
+    # long_description_content_type="text/markdown",
     ##url="https://github.com/realpython/reader",
     # author="Antonio Ortega",
     # author_email="antonio.ortega@kuleuven.be",
