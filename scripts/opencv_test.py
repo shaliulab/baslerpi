@@ -18,6 +18,7 @@ import cv2
 import sys
 
 import time
+
 # The exit code of the sample application.
 exitCode = 0
 
@@ -27,35 +28,38 @@ def main():
     last_tick = 0
     accum = 0
 
-
     try:
         # Create an instant camera object with the camera device found first.
-        camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+        camera = pylon.InstantCamera(
+            pylon.TlFactory.GetInstance().CreateFirstDevice()
+        )
         camera.Open()
-    
+
         # Print the model name of the camera.
         print("Using device ", camera.GetDeviceInfo().GetModelName())
-    
+
         # demonstrate some feature access
         new_width = camera.Width.GetValue() - camera.Width.GetInc()
         if new_width >= camera.Width.GetMin():
             camera.Width.SetValue(new_width)
-    
+
         # The parameter MaxNumBuffer can be used to control the count of buffers
         # allocated for grabbing. The default value of this parameter is 10.
         camera.MaxNumBuffer = 5
-    
+
         camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 
         camera.AcquisitionFrameRateEnable.SetValue(True)
         camera.AcquisitionFrameRate.SetValue(30.0)
-  
+
         # Camera.StopGrabbing() is called automatically by the RetrieveResult() method
         # when c_countOfImagesToGrab images have been retrieved.
         while camera.IsGrabbing():
             # Wait for an image and then retrieve it. A timeout of 5000 ms is used.
-            grabResult = camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-    
+            grabResult = camera.RetrieveResult(
+                5000, pylon.TimeoutHandling_ThrowException
+            )
+
             # Image grabbed successfully?
             if grabResult.GrabSucceeded():
                 # Access the image data.
@@ -69,17 +73,23 @@ def main():
                     accum = 0
                 else:
                     accum += 1
-                img = img[::-1,::-1]
-                img = cv2.resize(img, (3816//3, 2160//3), cv2.INTER_AREA)
-                img = cv2.putText(img, text, (100, 100), cv2.QT_FONT_NORMAL, 1, 255, 2)
+                img = img[::-1, ::-1]
+                img = cv2.resize(img, (3816 // 3, 2160 // 3), cv2.INTER_AREA)
+                img = cv2.putText(
+                    img, text, (100, 100), cv2.QT_FONT_NORMAL, 1, 255, 2
+                )
                 cv2.imshow("img", img)
                 if cv2.waitKey(1) == ord("q"):
                     break
             else:
-                print("Error: ", grabResult.ErrorCode, grabResult.ErrorDescription)
+                print(
+                    "Error: ",
+                    grabResult.ErrorCode,
+                    grabResult.ErrorDescription,
+                )
             grabResult.Release()
         camera.Close()
-    
+
     except genicam.GenericException as e:
         # Error handling.
         print("An exception occurred.")
@@ -87,9 +97,10 @@ def main():
         exitCode = 1
     except Exception as error:
         print(error)
-    
-    #import ipdb; ipdb.set_trace()
-    #sys.exit(exitCode)
+
+    # import ipdb; ipdb.set_trace()
+    # sys.exit(exitCode)
+
 
 if __name__ == "__main__":
     main()

@@ -11,25 +11,25 @@ README = (HERE / "README.md").read_text()
 setup(
     name="baslerpi",
     version="1.0.0",
-    #description="High resolution monitoring of Drosophila",
-    #long_description=README,
-    #long_description_content_type="text/markdown",
+    # description="High resolution monitoring of Drosophila",
+    # long_description=README,
+    # long_description_content_type="text/markdown",
     ##url="https://github.com/realpython/reader",
-    #author="Antonio Ortega",
-    #author_email="antonio.ortega@kuleuven.be",
-    #license="MIT",
-    #classifiers=[
+    # author="Antonio Ortega",
+    # author_email="antonio.ortega@kuleuven.be",
+    # license="MIT",
+    # classifiers=[
     #    "License :: OSI Approved :: MIT License",
     #    "Programming Language :: Python :: 3",
     #    "Programming Language :: Python :: 3.7",
-    #],
-    packages = find_packages(),
-    #include_package_data=True,
+    # ],
+    packages=find_packages(),
+    # include_package_data=True,
     install_requires=[],
     entry_points={
         "console_scripts": [
             "baslerpi=scripts.run:main",
-            "baslerpi-test=scripts.test_camera:main"
-            ]
+            "baslerpi-test=scripts.test_camera:main",
+        ]
     },
 )

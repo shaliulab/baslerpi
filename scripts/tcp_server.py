@@ -16,7 +16,10 @@ from baslerpi.web_utils import TCPServer
 from baslerpi.utils import read_config_yaml
 
 
-temp_file = tempfile.NamedTemporaryFile(prefix="flyhostel_", suffix=".jpg").name
+temp_file = tempfile.NamedTemporaryFile(
+    prefix="flyhostel_", suffix=".jpg"
+).name
+
 
 def save(frame):
     cv2.imwrite(temp_file, frame)
@@ -47,12 +50,19 @@ def main():
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port",   type=int, default=8084)
-    ap.add_argument("--no-preview", action="store_false", dest="preview", default=False)
+    ap.add_argument("--port", type=int, default=8084)
+    ap.add_argument(
+        "--no-preview", action="store_false", dest="preview", default=False
+    )
     ap.add_argument("--save", action="store_true", dest="save", default=False)
-    ap.add_argument("--preview", type=int, nargs=4, dest="preview", default=[0, 0, 200, 260])
+    ap.add_argument(
+        "--preview",
+        type=int,
+        nargs=4,
+        dest="preview",
+        default=[0, 0, 200, 260],
+    )
     args = ap.parse_args()
-
 
     tcp_server = TCPServer(args.host, args.port)
     tcp_server.daemon = True

@@ -15,8 +15,14 @@ import cv2
 import numpy as np
 
 from baslerpi.utils import parse_protocol, read_config_yaml
-from baslerpi.io.cameras.basler_camera import BaslerCamera, BaslerCameraDLCCompatibility
-from baslerpi.io.cameras.emulator_camera import RandomCamera, DeterministicCamera
+from baslerpi.io.cameras.basler_camera import (
+    BaslerCamera,
+    BaslerCameraDLCCompatibility,
+)
+from baslerpi.io.cameras.emulator_camera import (
+    RandomCamera,
+    DeterministicCamera,
+)
 from baslerpi.web_utils import TCPClient
 from baslerpi.processing.annotate import Annotator
 
@@ -27,15 +33,17 @@ logger = logging.getLogger(__name__)
 
 
 def range_limited_int_type(arg):
-    """ Type function for argparse - an int within some predefined bounds """
+    """Type function for argparse - an int within some predefined bounds"""
     MIN_VAL = 100
     MAX_VAL = 800
     try:
         f = int(arg)
-    except ValueError:    
+    except ValueError:
         raise argparse.ArgumentTypeError("Must be an int number")
     if f < MIN_VAL or f > MAX_VAL:
-        raise argparse.ArgumentTypeError("Argument must be < " + str(MAX_VAL) + "and > " + str(MIN_VAL))
+        raise argparse.ArgumentTypeError(
+            "Argument must be < " + str(MAX_VAL) + "and > " + str(MIN_VAL)
+        )
     return f
 
 
@@ -46,45 +54,92 @@ ap.add_argument("-w", "--width", type=int, default=1280)
 ap.add_argument("-?", dest="print_help", default=False, action="store_true")
 ap.add_argument("-o", "--output", required=False)
 ap.add_argument("-fps", "--framerate", default=30, type=int)
-ap.add_argument("-ss", "--shutter", default=15000, type=int, help="Manually controls the speed of the camera’s shutter in microseconds (i.e. 1e6 us = 1s")
-ap.add_argument("-v", "--verbose", dest="verbose", default=False, action="store_true")
-ap.add_argument("-t", "--timeout", default=5000, type=int, help="Control the timeout, in ms, that the video will be recorded")
-ap.add_argument("-cfx", "--colfx", default="128:128", help="""
+ap.add_argument(
+    "-ss",
+    "--shutter",
+    default=15000,
+    type=int,
+    help="Manually controls the speed of the camera’s shutter in microseconds (i.e. 1e6 us = 1s",
+)
+ap.add_argument(
+    "-v", "--verbose", dest="verbose", default=False, action="store_true"
+)
+ap.add_argument(
+    "-t",
+    "--timeout",
+    default=5000,
+    type=int,
+    help="Control the timeout, in ms, that the video will be recorded",
+)
+ap.add_argument(
+    "-cfx",
+    "--colfx",
+    default="128:128",
+    help="""
     TODO Allows the user to adjust the YUV colour space for fine-grained control of the final image.
     Values should be given as U:V , where U controls the chrominance and V the luminance.
     A value of 128:128 will result in a greyscale image
-    """
+    """,
 )
-ap.add_argument("-ISO", "--ISO", dest="iso", type=range_limited_int_type, help="TODO ISO sensitivity")
-#ap.add_argument("-roi", "--roi", nargs="4",  help="TODO Allows part of the camera sensor to be specified as the capture source. Ex 0 0 100 100", required=False, default="0 0 math.inf math.inf")
-ap.add_argument("-n", "--no-preview", dest="preview", default=False, action="store_false", help="TODO Does not display a preview window while capturing.")
-ap.add_argument("-p", "--preview", dest="preview", type=int, nargs=4, help=
-    """
+ap.add_argument(
+    "-ISO",
+    "--ISO",
+    dest="iso",
+    type=range_limited_int_type,
+    help="TODO ISO sensitivity",
+)
+# ap.add_argument("-roi", "--roi", nargs="4",  help="TODO Allows part of the camera sensor to be specified as the capture source. Ex 0 0 100 100", required=False, default="0 0 math.inf math.inf")
+ap.add_argument(
+    "-n",
+    "--no-preview",
+    dest="preview",
+    default=False,
+    action="store_false",
+    help="TODO Does not display a preview window while capturing.",
+)
+ap.add_argument(
+    "-p",
+    "--preview",
+    dest="preview",
+    type=int,
+    nargs=4,
+    help="""
     TODO
     Sets the size of the preview window and where it appears.
     The value should be given as X,Y,W,H —where X and Y are the
     pixel coordinates where the window’s top-left corner should be drawn, and W and H
     the width and height of the preview window in pixels, respectively.
-    """
+    """,
 )
 
-ap.add_argument("-e", "--emulate", default=None, help=
-        """
+ap.add_argument(
+    "-e",
+    "--emulate",
+    default=None,
+    help="""
         If passed and set to random, an emulator camera yielding random RGB images is run, instead of a Basler Camera.
         If passed and set to deterministic, the same random frame is always passed.
         If not passed at all, a basler camera is used.
         This is useful for debugging / testing purposes.
-        """)
-ap.add_argument("-a", "--annotate", action="append", nargs="+", type=str, help="Enable/set annotate flags or text")
+        """,
+)
+ap.add_argument(
+    "-a",
+    "--annotate",
+    action="append",
+    nargs="+",
+    type=str,
+    help="Enable/set annotate flags or text",
+)
 
 args = ap.parse_args()
 
 if args.print_help:
-  ap.print_help()
-  sys.exit(0)
+    ap.print_help()
+    sys.exit(0)
+
 
 class BaslerVidClient:
-
     def __init__(self, args):
 
         if args.emulate is None:
@@ -108,25 +163,23 @@ class BaslerVidClient:
                     annotator._decompose_value(v)
 
         camera = CameraClass(
-          # temporal resolution
-          framerate=args.framerate,
-          # spatial resolution
-          height=args.height,
-          width=args.width,
-          # shutter speed (exposure time)
-          shutter=args.shutter,
-          # ISO
-          iso = args.iso,
-          # timeout
-          timeout=args.timeout,
-          # color scale of the camera
-          colfx=args.colfx,
-          annotator=annotator
+            # temporal resolution
+            framerate=args.framerate,
+            # spatial resolution
+            height=args.height,
+            width=args.width,
+            # shutter speed (exposure time)
+            shutter=args.shutter,
+            # ISO
+            iso=args.iso,
+            # timeout
+            timeout=args.timeout,
+            # color scale of the camera
+            colfx=args.colfx,
+            annotator=annotator,
         )
 
         self._camera = camera
-
-
 
     def stream(self, url):
         """
@@ -161,11 +214,11 @@ class BaslerVidClient:
         """
 
         logger.debug("Piping data to stdout")
-        encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
         logging.basicConfig(level=logging.CRITICAL)
 
         for t_ms, frame in self._camera:
-            result, imgencode = cv2.imencode('.jpg', frame, encode_param)
+            result, imgencode = cv2.imencode(".jpg", frame, encode_param)
             data = np.array(imgencode)
             binary_data = data.tostring()
             sys.stdout.buffer.write(binary_data)
@@ -177,8 +230,6 @@ class BaslerVidClient:
         Preview data in a pop up window live
         """
         logger.debug("Running preview of camera")
-        
-
 
         initialized = False
         cv2.namedWindow("preview", cv2.WINDOW_NORMAL)
@@ -186,14 +237,14 @@ class BaslerVidClient:
         cv2.resizeWindow("preview", *args.preview[2:4])
 
         for t_ms, frame in self._camera:
-            try: 
+            try:
                 if not initialized:
                     pass
 
                 initialized = True
                 cv2.imshow("preview", frame)
-                if cv2.waitKey(25) & 0xFF == ord('q'):
-                   break
+                if cv2.waitKey(25) & 0xFF == ord("q"):
+                    break
             except KeyboardInterrupt:
                 return 0
         return 0
@@ -203,12 +254,11 @@ class BaslerVidClient:
         camera.close()
         return 0
 
-
     def run(self, args):
         """
         Run baslervid by following user's arguments
         """
-        
+
         self._camera.open()
 
         if args.output is None:
@@ -224,6 +274,7 @@ class BaslerVidClient:
                 self.stream(url)
 
         self._camera.close()
+
 
 baslervid = BaslerVidClient(args)
 baslervid.run(args)

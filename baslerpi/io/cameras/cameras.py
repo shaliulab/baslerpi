@@ -1,24 +1,33 @@
-__author__ = 'antonio'
+__author__ = "antonio"
 
 import logging
 import logging.config
 import time
 import math
+
 logger = logging.getLogger(__name__)
 
 from baslerpi.utils import read_config_yaml
 
-#config = read_config_yaml("scripts/logging.yaml")
-#logging.config.dictConfig(config)
+# config = read_config_yaml("scripts/logging.yaml")
+# logging.config.dictConfig(config)
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=W0223
 
 
 class BaseCamera:
-
-    def __init__(self, width=1280, height=960, framerate=30, exposure=15000, iso=0, drop_each=1,
-        use_wall_clock=False, timeout=30000, preview=False
+    def __init__(
+        self,
+        width=1280,
+        height=960,
+        framerate=30,
+        exposure=15000,
+        iso=0,
+        drop_each=1,
+        use_wall_clock=False,
+        timeout=30000,
+        preview=False,
     ):
         """
         The template class to generate and use video streams.
@@ -59,7 +68,7 @@ class BaseCamera:
         self._start_time = None
         self._target_framerate = framerate
         self._computed_framerate = 0
-        self._framerate  = 0
+        self._framerate = 0
         self._target_exposuretime = exposure
         self._exposuretime = 0
         self._drop_each = drop_each
@@ -67,7 +76,6 @@ class BaseCamera:
         self._count = 0
         self._preview = preview
         self.failed_count = 0
-
 
     def time_stamp(self):
         if self._start_time is None:
@@ -78,12 +86,12 @@ class BaseCamera:
             now = time.time()
             return now - self._start_time
 
-    def __exit__(self): # pylint: disable=unexpected-special-method-signature
+    def __exit__(self):  # pylint: disable=unexpected-special-method-signature
         logger.info("Closing camera")
         self.close()
 
     def __str__(self):
-        template = '%s: %s FPS, ET %s ms (target %s FPS, %s ms)'
+        template = "%s: %s FPS, ET %s ms (target %s FPS, %s ms)"
         return template % (
             self.__class__.__name__,
             str(self._framerate).zfill(4),
@@ -91,7 +99,6 @@ class BaseCamera:
             str(self._target_framerate).zfill(4),
             str(self._target_exposuretime).zfill(8),
         )
-
 
     def __iter__(self):
         """
@@ -101,7 +108,7 @@ class BaseCamera:
         :rtype: (int, :class:`~numpy.ndarray`)
         """
         at_least_one_frame = False
-      
+
         while not self.stopped:
             if self.is_last_frame() or not self.is_open():
                 if not at_least_one_frame:
@@ -120,7 +127,6 @@ class BaseCamera:
                 self._count += 1
                 yield t_ms, out
 
-
     @property
     def computed_framerate(self):
         return self._computed_framerate
@@ -135,13 +141,13 @@ class BaseCamera:
         print(f"Initialized {self.__class__.__name__}")
         self._report()
 
-     def report(self):
+    def report(self):
         logger.debug(f"Actual framerate = {self.framerate}")
         logger.debug(f"Acutal exposure time = {self.exposuretime}")
 
     def is_last_frame(self):
         raise NotImplementedError
-    
+
     def _next_image(self):
         raise NotImplementedError
 
@@ -161,8 +167,7 @@ class BaseCamera:
         """
         raise NotImplementedError
 
-class ExtendableBaseCamera(BaseCamera):
 
+class ExtendableBaseCamera(BaseCamera):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        

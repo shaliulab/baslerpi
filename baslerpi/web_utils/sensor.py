@@ -2,6 +2,7 @@ import json
 import urllib.request
 from socket import timeout as TimeoutException
 
+
 class QuerySensor:
     def __init__(self, port):
         self._port = port

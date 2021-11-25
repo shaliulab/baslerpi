@@ -24,20 +24,25 @@ class TextStep:
     def put_text(self, frame, text):
 
         if len(frame.shape) == 3:
-            color = (self._color,) * frame.shape[2] # prob always 3
+            color = (self._color,) * frame.shape[2]  # prob always 3
         else:
             color = self._color
 
         frame = cv2.putText(
-            frame, text, self._POS, self._FONT,
-            self._FONTSCALE, color, 2, cv2.LINE_AA
+            frame,
+            text,
+            self._POS,
+            self._FONT,
+            self._FONTSCALE,
+            color,
+            2,
+            cv2.LINE_AA,
         )
 
         return frame
 
 
 class Overlay:
-
     def apply(self, frame):
         overlay_width = frame.shape[1]
         overlay_height = 100
@@ -48,22 +53,22 @@ class Overlay:
         frame[:overlay_height, :overlay_width] = overlay
         return frame
 
+
 class TimeAnnotator(TextStep):
     """
     Teach a Recorder class how to write down on the frame
     datetime and other potentially relevant variables
     """
 
-    _POS =  (1, 25) # x, y
+    _POS = (1, 25)  # x, y
 
     def apply(self, frame):
-        text  = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        text = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         frame = self.put_text(frame, text)
         return frame
 
+
 class FrameCountAnnotator(TextStep):
-
-
     def __init__(self):
         self._frame_count = 0
 
@@ -78,8 +83,10 @@ class FrameCountAnnotator(TextStep):
         frame = self.put_text(frame, text)
         return frame
 
+
 class BlackFrameCountAnnotator(FrameCountAnnotator):
     _color = 0
+
 
 class FPSAnnotator(TextStep):
     """
@@ -87,7 +94,7 @@ class FPSAnnotator(TextStep):
     """
 
     _INTERVAL_SECONDS = 1
-    _POS = (1, 60) # x, y
+    _POS = (1, 60)  # x, y
 
     def __init__(self):
         self._lastcount = 0
@@ -110,6 +117,7 @@ class FPSAnnotator(TextStep):
         frame = self.put_text(frame, text)
         return frame
 
+
 class Inverter:
     """
     Invert a frame so y = 255 - x
@@ -122,7 +130,7 @@ class Inverter:
         else:
             gray = frame
 
-        gray  = 255 - gray
+        gray = 255 - gray
         return gray
 
 
@@ -130,12 +138,13 @@ class Masker:
     """
     Mask a video with a predefined mask
     """
+
     _mask = None
     _box = [0, 0, 1000, 1000]
 
     def set_mask(self, frame, box):
         mask = np.zeros(frame.shape, np.uint8)
-        mask[box[0]:box[2], box[1]:box[3]] = 255
+        mask[box[0] : box[2], box[1] : box[3]] = 255
         self._mask = mask
 
     def apply(self, frame):
@@ -145,4 +154,3 @@ class Masker:
 
         cv2.bitwise_and(frame, self._mask, frame)
         return frame
-

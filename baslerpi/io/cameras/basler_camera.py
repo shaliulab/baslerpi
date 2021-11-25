@@ -21,6 +21,7 @@ console = logging.StreamHandler()
 console.setLevel(logging.INFO)
 logger.addHandler(console)
 
+
 class BaslerCamera(BaseCamera):
 
     _MAX_FAILED_COUNT = 5
@@ -53,10 +54,11 @@ class BaslerCamera(BaseCamera):
         self.exposuretime = self._target_exposuretime
         self.framerate = self._target_framerate
 
-
     def grab(self):
-        
-        grabResult = self.camera.RetrieveResult(self._timeout, pylon.TimeoutHandling_ThrowException)
+
+        grabResult = self.camera.RetrieveResult(
+            self._timeout, pylon.TimeoutHandling_ThrowException
+        )
         status = grabResult.GrabSucceeded()
         if status:
             img = grabResult.Array
@@ -64,10 +66,11 @@ class BaslerCamera(BaseCamera):
         else:
             img = None
             self.failed_count += 1
-            logger.debug("Pylon could not fetch next frame. Trial no %d", failed_count)
+            logger.debug(
+                "Pylon could not fetch next frame. Trial no %d", failed_count
+            )
 
         return status, img
-
 
     def open(self, maxframes=None, buffersize=5):
         """
@@ -77,23 +80,33 @@ class BaslerCamera(BaseCamera):
         """
         try:
             if not getattr(self, "camera", False):
-                self.camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+                self.camera = pylon.InstantCamera(
+                    pylon.TlFactory.GetInstance().CreateFirstDevice()
+                )
             self.camera.Open()
             self.configure()
             self.report()
 
             # Print the model name of the camera.
-            logger.info("Using device %s", self.camera.GetDeviceInfo().GetModelName())
+            logger.info(
+                "Using device %s", self.camera.GetDeviceInfo().GetModelName()
+            )
             if maxframes is not None:
-                self.camera.StartGrabbingMax(maxframes) # if we want to limit the number of frames
+                self.camera.StartGrabbingMax(
+                    maxframes
+                )  # if we want to limit the number of frames
 
             self.camera.MaxNumBuffer = buffersize
             self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
-            
+
             _, img = self.grab()
             logger.info("Pylon camera opened successfully")
             self._start_time = time.time()
-            logger.info("Resolution of incoming frames: %dx%d", img.shape[1], img.shape[0])
+            logger.info(
+                "Resolution of incoming frames: %dx%d",
+                img.shape[1],
+                img.shape[0],
+            )
 
         except Exception as error:
             logger.error("Cannot open camera. See error trace below")
@@ -101,7 +114,6 @@ class BaslerCamera(BaseCamera):
             logger.warning(traceback.print_exc())
 
         return True
-
 
     def _next_image(self):
         """
@@ -114,7 +126,10 @@ class BaslerCamera(BaseCamera):
         # not to be run continuosly
         # i.e. in normal conditions, it should be broken every time
         # the continously running loop is implemented BaseCamera.__iter__
-        while self.camera.IsGrabbing() and self.failed_count < self._MAX_FAILED_COUNT:
+        while (
+            self.camera.IsGrabbing()
+            and self.failed_count < self._MAX_FAILED_COUNT
+        ):
 
             grabResult = None
 
@@ -123,7 +138,7 @@ class BaslerCamera(BaseCamera):
                 status, img = self.grab()
                 if status:
                     return img
-                
+
                 elif self.failed_count >= self._MAX_FAILED_COUNT:
                     message = f"Tried reading next frame {self._MAX_FAILED_COUNT} times and none worked. Exiting."
                     logger.warning(message)
@@ -135,7 +150,6 @@ class BaslerCamera(BaseCamera):
             except Exception as error:
                 logger.error(error)
                 logger.warning(traceback.print_exc())
-
 
     # called by BaseCamera.__exit__()
     def close(self):
@@ -149,7 +163,10 @@ class BaslerCamera(BaseCamera):
         Convenience function to return resolution of camera.
         Resolution = (number_horizontal_pixels, number_vertical_pixels)
         """
-        self._resolution = (self.camera.Width.GetValue(), self.camera.Height.GetValue())
+        self._resolution = (
+            self.camera.Width.GetValue(),
+            self.camera.Height.GetValue(),
+        )
         return self._resolution
 
     @property
@@ -161,7 +178,6 @@ class BaslerCamera(BaseCamera):
         """
         # TODO Return number of channels!
         return (self.camera.Height.GetValue(), self.camera.Width.GetValue(), 1)
-
 
     @property
     def framerate(self):
@@ -176,7 +192,7 @@ class BaslerCamera(BaseCamera):
     @framerate.setter
     @drive_basler
     def framerate(self, framerate):
-        
+
         if not self.camera.AcquisitionFrameRateEnable.GetValue():
             self.camera.AcquisitionFrameRateEnable.SetValue(True)
 
@@ -188,12 +204,10 @@ class BaslerCamera(BaseCamera):
             logger.warning(error)
             logger.debug(traceback.print_exc())
 
-
     @property
     @drive_basler
     def exposuretime(self):
         return self._exposuretime
-
 
     @exposuretime.getter
     @drive_basler
@@ -219,8 +233,19 @@ def get_parser(ap=None):
 
     if ap is None:
         ap = argparse.ArgumentParser()
-        ap.add_argument("--framerate", type=int, default=30, help="Frames Per Second of the camera")
-        ap.add_argument("--exposure-time", dest="exposure", type=int, default=25000, help="Exposure time in useconds (10^-6 s)")
+        ap.add_argument(
+            "--framerate",
+            type=int,
+            default=30,
+            help="Frames Per Second of the camera",
+        )
+        ap.add_argument(
+            "--exposure-time",
+            dest="exposure",
+            type=int,
+            default=25000,
+            help="Exposure time in useconds (10^-6 s)",
+        )
     return ap
 
 
@@ -234,15 +259,17 @@ def get_dynamic_camera_kwargs(args):
     keys = list(signature(BaslerCamera).parameters.keys())
     for cls in BaslerCamera.__bases__:
         keys = keys + list(signature(cls).parameters.keys())
-    
+
     camera_kwargs = {k: getattr(args, k) for k in vars(args) if k in keys}
     return camera_kwargs
 
+
 def setup_camera(args=None):
-    
+
     camera_kwargs = {"framerate": args.framerate, "exposure": args.exposure}
     camera = BaslerCamera(**camera_kwargs)
     return camera
+
 
 def main(args=None, ap=None):
     """
@@ -251,7 +278,9 @@ def main(args=None, ap=None):
 
     if args is None:
         ap = get_parser()
-        ap.add_argument("--maxframes", default=5, help="Number of frames to be acquired")
+        ap.add_argument(
+            "--maxframes", default=5, help="Number of frames to be acquired"
+        )
         args = ap.parse_args()
 
     camera = setup_camera(args)

@@ -19,22 +19,25 @@ def get_parser(ap=None):
 
     if ap is None:
         ap = argparse.ArgumentParser()
-    ap.add_argument("--config", help="Config file in json format", default="/etc/flyhostel.conf")
+    ap.add_argument(
+        "--config",
+        help="Config file in json format",
+        default="/etc/flyhostel.conf",
+    )
     ap.add_argument("-D", "--debug", dest="debug", action="store_true")
     ap.add_argument("--preview", action="store_true")
     return ap
 
 
-
 def setup_logging():
 
-    with open("/etc/baslerpi.yaml" , "r") as fh:
+    with open("/etc/baslerpi.yaml", "r") as fh:
         try:
             logging_config = yaml.safe_load(fh)
             logging.config.dictConfig(logging_config)
         except yaml.YAMLError as error:
             raise error
-    
+
     return logging
 
 
@@ -54,11 +57,11 @@ def setup(args):
     camera.open()
     recorder = setup_recorder(camera, sensor, args)
     recorder.open(
-        path=os.path.join(config["videos"]["folder"], OUTPUT),
-        fmt = "mjpeg/avi"
+        path=os.path.join(config["videos"]["folder"], OUTPUT), fmt="mjpeg/avi"
     )
 
     return recorder
+
 
 def run(recorder):
 
@@ -69,11 +72,11 @@ def run(recorder):
         recorder._stop_event.set()
 
     finally:
-        recorder.close()       
+        recorder.close()
         recorder.join()
 
 
-def main(args = None, ap=None):
+def main(args=None, ap=None):
 
     if args is None:
         ap = get_parser(ap)
@@ -81,11 +84,10 @@ def main(args = None, ap=None):
 
     recorder = setup(args)
     run(recorder)
-    
+
 
 if __name__ == "__main__":
-    
+
     ap = camera_parser()
     ap = recorder_parser(ap=ap)
-    main(ap = ap)
-
+    main(ap=ap)

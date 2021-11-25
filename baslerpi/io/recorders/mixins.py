@@ -1,4 +1,3 @@
-
 import logging
 import datetime
 import time
@@ -18,9 +17,8 @@ import skvideo.io
 import cv2
 import imgstore
 
-FMT_TO_CODEC = {
-    "h264/avi": "libx264"
-}
+FMT_TO_CODEC = {"h264/avi": "libx264"}
+
 
 class FFMPEGMixin:
     """
@@ -34,7 +32,6 @@ class FFMPEGMixin:
         # skvideo.io.FFmpegWriter expects kwarg named filename
         # but this Python module names this argument throught the code path
         kwargs["filename"] = kwargs.pop("path")
-
 
         # Report information to user
         logger.info("Initializing FFMPEG video with following properties:")
@@ -55,10 +52,7 @@ class FFMPEGMixin:
             fmt = kwargs.pop("fmt")
             kwargs["outputdict"]["-c:v"] = FMT_TO_CODEC[fmt]
 
-
-        self._video_writer = skvideo.io.FFmpegWriter(
-            **kwargs, verbosity=1
-        )
+        self._video_writer = skvideo.io.FFmpegWriter(**kwargs, verbosity=1)
 
     def write(self, frame, i, timestamp):
         frame = self.pipeline(frame)
@@ -67,10 +61,12 @@ class FFMPEGMixin:
     def close(self):
         self._video_writer.close()
 
+
 class OpenCVMixin:
     """
     Teach a Recorder class how to use OpenCV to write a video
     """
+
     def open(self, path, maxframes=None):
         """
         Open a cv2.VideoWriter to the specified path
@@ -99,17 +95,16 @@ class OpenCVMixin:
 
         self._output_dir = output_dir
         if not os.path.isdir(self._output_dir) and self._debug:
-                os.mkdir(self._output_dir)
+            os.mkdir(self._output_dir)
 
         # Initialize video writer
         self._video_writer = cv2.VideoWriter(
             path,
-            #cv2.VideoWriter_fourcc(*"DIVX"),
+            # cv2.VideoWriter_fourcc(*"DIVX"),
             cv2.VideoWriter_fourcc(*"XVID"),
             int(self._framerate),
-            self.resolution
+            self.resolution,
         )
-
 
     def write(self, frame, i, timestamp):
         frame = self.pipeline(frame)
@@ -122,7 +117,6 @@ class OpenCVMixin:
         self._video_writer.release()
 
 
-
 class AsyncWriter(threading.Thread):
     """
     Asynchronous writer of frames using the imgstore module
@@ -132,9 +126,9 @@ class AsyncWriter(threading.Thread):
         # Initialize video writer
         self._queue = queue
         self._stop_queue = stop_queue
-        #keys = list(inspect.signature(imgstore.new_for_format).parameters.keys())
-        #imgstore_kwargs = {k: kwargs.pop(k) for k in keys if k in kwargs}
-        #print(imgstore_kwargs)
+        # keys = list(inspect.signature(imgstore.new_for_format).parameters.keys())
+        # imgstore_kwargs = {k: kwargs.pop(k) for k in keys if k in kwargs}
+        # print(imgstore_kwargs)
         self._video_writer = imgstore.new_for_format(fmt=fmt, **kwargs)
         self._framecount = 0
         super().__init__(*args)
@@ -160,6 +154,7 @@ class AsyncWriter(threading.Thread):
     def _close(self):
         self._video_writer.close()
 
+
 class ImgstoreMixin:
     """
     Teach a Recorder class how to use Imgstore to write a video
@@ -174,45 +169,48 @@ class ImgstoreMixin:
     # otherwise you will run out of RAM
     _CACHE_SIZE = 1e2
 
-
     def _save_extra_data(self, **kwargs):
         store = self._async_writer._video_writer
         logger.info("Writing environmental data")
         try:
             store.add_extra_data(**kwargs)
         except ValueError as error:
-            logger.error(f"Cannot save extra data on chunk {store._chunk_n}. See more details following this message. I will try to recover from it")
+            logger.error(
+                f"Cannot save extra data on chunk {store._chunk_n}. See more details following this message. I will try to recover from it"
+            )
             logger.error(error)
             logger.error(traceback.print_exc())
         except Exception as error:
-            logger.error("Unknown error. See more details following this message")
+            logger.error(
+                "Unknown error. See more details following this message"
+            )
             logger.error(error)
             logger.error(traceback.print_exc())
-            
-        return 0
 
+        return 0
 
     def save_extra_data(self, timestamp):
 
-        if self._sensor is not None and timestamp > (self.last_tick + self.EXTRA_DATA_FREQ):
+        if self._sensor is not None and timestamp > (
+            self.last_tick + self.EXTRA_DATA_FREQ
+        ):
             environmental_data = self._sensor.query(timeout=1)
             if environmental_data is not None:
                 self._save_extra_data(
-                        temperature=environmental_data["temperature"],
-                        humidity=environmental_data["humidity"],
-                        light=environmental_data["light"],
-                        time=timestamp
+                    temperature=environmental_data["temperature"],
+                    humidity=environmental_data["humidity"],
+                    light=environmental_data["light"],
+                    time=timestamp,
                 )
             self.last_tick = timestamp
 
         else:
             self._save_extra_data(
-                    temperature=np.nan,
-                    humidity=np.nan,
-                    light=np.nan,
-                    time=timestamp
+                temperature=np.nan,
+                humidity=np.nan,
+                light=np.nan,
+                time=timestamp,
             )
-
 
     def open(self, path, fmt="h264/avi", maxframes=None):
 
@@ -228,18 +226,23 @@ class ImgstoreMixin:
         logger.info("  Format (codec): %s", self._fmt)
         logger.info("  Chunksize: %s", self._chunksize)
 
-        kwargs = {"framerate": self._framerate,
-                  "mode": 'w',
-                  "basedir": self._path,
-                  "imgshape": self.resolution[::-1], # reverse order so it becomes nrows x ncols i.e. height x width
-                  "imgdtype": self._dtype,
-                  "chunksize": self._chunksize
-                  }
+        kwargs = {
+            "framerate": self._framerate,
+            "mode": "w",
+            "basedir": self._path,
+            "imgshape": self.resolution[
+                ::-1
+            ],  # reverse order so it becomes nrows x ncols i.e. height x width
+            "imgdtype": self._dtype,
+            "chunksize": self._chunksize,
+        }
 
         self._queue = queue.Queue(maxsize=self._CACHE_SIZE)
         self._stop_queue = queue.Queue()
         self._last_chunk = -1
-        self._async_writer = AsyncWriter(self._fmt, self._queue, self._stop_queue, **kwargs)
+        self._async_writer = AsyncWriter(
+            self._fmt, self._queue, self._stop_queue, **kwargs
+        )
         self._async_writer.start()
         self._tqdm = tqdm.tqdm(position=1, total=100, unit="")
         self._last_cache_accumulated = 0
@@ -254,7 +257,9 @@ class ImgstoreMixin:
 
     def extract_first_chunk_frame(self, frame=None):
 
-        last_shot_path = os.path.join(self._path, str(self._last_chunk).zfill(6) + ".png")
+        last_shot_path = os.path.join(
+            self._path, str(self._last_chunk).zfill(6) + ".png"
+        )
         if frame is None:
             # This seems to not work when the video is running
             # which actually is every use case
@@ -267,7 +272,11 @@ class ImgstoreMixin:
             assert last_video_n == self._last_chunk
             video_path = os.path.join(self._path, last_video)
             assert os.path.exists(video_path)
-            subprocess.Popen(f"ffmpeg -ss 0.5 -i {video_path} -vframes 1 -f image2 {last_shot_path}".split(" "))
+            subprocess.Popen(
+                f"ffmpeg -ss 0.5 -i {video_path} -vframes 1 -f image2 {last_shot_path}".split(
+                    " "
+                )
+            )
         else:
             cv2.imwrite(last_shot_path, frame)
 
@@ -275,11 +284,10 @@ class ImgstoreMixin:
     def usage(self):
         return 100 * self._queue.qsize() / self._CACHE_SIZE
 
-
     def _info(self):
-         # logger.info("Usage: {self.usage}%")
-         self._tqdm.n = int(self.usage)
-         self._tqdm.refresh()
+        # logger.info("Usage: {self.usage}%")
+        self._tqdm.n = int(self.usage)
+        self._tqdm.refresh()
 
     def write(self, frame, i, timestamp):
         frame = self.pipeline(frame)
@@ -291,15 +299,17 @@ class ImgstoreMixin:
 
         cache_size = self._queue.qsize()
         if cache_size != self._last_cache_accumulated:
-            logger.info(f"{cache_size} frames are accumulated in the cache (max {self._CACHE_SIZE} frames)")
+            logger.info(
+                f"{cache_size} frames are accumulated in the cache (max {self._CACHE_SIZE} frames)"
+            )
         self._last_cache_accumulated = cache_size
 
-        #self._async_writer.write(frame, i)
+        # self._async_writer.write(frame, i)
         if self.has_new_chunk():
             self.extract_first_chunk_frame(frame)
 
     def close(self):
         logger.info("Quiting recorder...")
         self._stop_queue.put("STOP")
-        #self._video_writer.close()
+        # self._video_writer.close()
         self.camera.close()

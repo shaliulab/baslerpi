@@ -14,8 +14,10 @@ from baslerpi.processing.compressor import Compressor
 
 ap = argparse.ArgumentParser()
 
-ap.add_argument("--output-dir", type=str, default="/1TB/Cloud/Lab/Projects/FlyBowl/videos")
-ap.add_argument("--duration", type=int, help = "(s)")
+ap.add_argument(
+    "--output-dir", type=str, default="/1TB/Cloud/Lab/Projects/FlyBowl/videos"
+)
+ap.add_argument("--duration", type=int, help="(s)")
 ap.add_argument("--encoder", type=str)
 ap.add_argument("--crf", type=int)
 ap.add_argument("--compress", dest="compress", action="store_true")
@@ -28,7 +30,11 @@ encoder = args["encoder"]
 duration = args["duration"]
 compress = args["compress"]
 
-recorder_kwargs = {k: args[k] for k in args.keys() if k in ["duration", "encoder", "crf"] and args[k] is not None}
+recorder_kwargs = {
+    k: args[k]
+    for k in args.keys()
+    if k in ["duration", "encoder", "crf"] and args[k] is not None
+}
 print(recorder_kwargs)
 
 filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -42,11 +48,9 @@ if compress:
     compressor = Compressor(ntargets=3, shape=camera.shape)
 else:
     compressor = None
-recorder = Recorder(camera, compressor=compressor,**recorder_kwargs)
+recorder = Recorder(camera, compressor=compressor, **recorder_kwargs)
 
-recorder.open(
-    filename = os.path.join(output_dir, f"{filename}.avi")
-)
+recorder.open(filename=os.path.join(output_dir, f"{filename}.avi"))
 
 try:
     recorder.start()
@@ -57,4 +61,3 @@ except KeyboardInterrupt:
 
 recorder.close()
 camera.close()
-

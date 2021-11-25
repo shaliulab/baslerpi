@@ -9,31 +9,30 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-class TCPClient(threading.Thread):
 
+class TCPClient(threading.Thread):
     def __init__(self, ip, port, *args, **kwargs):
         self._ip = ip
         self._port = port
-        self._encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
+        self._encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
         self._queue = queue.Queue(maxsize=1)
         self._stop = threading.Event()
         super().__init__(*args, **kwargs)
 
-
     def connect(self):
         logger.debug("Opening socket")
         self._sock = socket.create_connection((self._ip, self._port))
-        #self._sock = socket.socket()
-        #self._sock.connect((self._ip, self._port))
+        # self._sock = socket.socket()
+        # self._sock.connect((self._ip, self._port))
 
     def queue(self, frame):
         logger.debug("Queuing frame in TCP client")
         self._queue.put(frame)
 
     def stream(self, frame):
-        result, imgencode = cv2.imencode('.jpg', frame, self._encode_param)
-        #data = np.array(imgencode)
-        data = imgencode 
+        result, imgencode = cv2.imencode(".jpg", frame, self._encode_param)
+        # data = np.array(imgencode)
+        data = imgencode
         stringData = data.tostring()
         header = str(len(stringData)).ljust(16)
         logger.debug("Sending frame to TCP server")
@@ -43,8 +42,8 @@ class TCPClient(threading.Thread):
             logger.warning("Connection refused")
             return None
 
-        self._sock.send(header.encode("utf-8"));
-        self._sock.send(stringData);
+        self._sock.send(header.encode("utf-8"))
+        self._sock.send(stringData)
         self.close()
         return data
 
@@ -53,13 +52,14 @@ class TCPClient(threading.Thread):
         while not self._stop.is_set():
             frame = self._queue.get()
             data = self.stream(frame)
-            #decimg=cv2.imdecode(data,1)
+            # decimg=cv2.imdecode(data,1)
 
     def close(self):
         logger.debug("Closing socket")
         self._sock.close()
 
-#def encode(frame):
+
+# def encode(frame):
 #
 #    encode_param=[int(cv2.IMWRITE_JPEG_QUALITY),90]
 #    bef = time.time()
@@ -72,7 +72,7 @@ class TCPClient(threading.Thread):
 #    return stringData
 #
 #
-#def parallel_encoding(in_q, out_q):
+# def parallel_encoding(in_q, out_q):
 #    while True:
 #        frame = in_q.get()
 #        encoded_frame = encode(frame)
@@ -80,16 +80,15 @@ class TCPClient(threading.Thread):
 
 
 class FastTCPClient(TCPClient):
-
     def __init__(self, in_q, *args, **kwargs):
         self.manager = multiprocessing.Manager()
-        #in_q = self.manager.Queue(maxsize=1)
-        out_q=self.manager.Queue(maxsize=1) 
+        # in_q = self.manager.Queue(maxsize=1)
+        out_q = self.manager.Queue(maxsize=1)
         self.in_q = in_q
         self.out_q = out_q
         self._stop_event = multiprocessing.Event()
-        #self._streamingThread = threading.Thread(target=self.streaming_thread_worker)
-        #self._streamingThread.start()
+        # self._streamingThread = threading.Thread(target=self.streaming_thread_worker)
+        # self._streamingThread.start()
         super().__init__(*args, **kwargs)
 
     @staticmethod
@@ -101,23 +100,25 @@ class FastTCPClient(TCPClient):
             else:
                 raise Exception("Passed frame type is not np.uint8")
         except AttributeError as error:
-            #print(frame)
+            # print(frame)
             raise error
-                
+
         bef = time.time()
-        result, imgencode = cv2.imencode('.jpg', frame, *args)
+        result, imgencode = cv2.imencode(".jpg", frame, *args)
         aft = time.time()
         encoding_logger.debug(f"Elapsed time encoding frame: {aft-bef}")
         data = np.array(imgencode)
         stringData = data.tostring()
         return stringData
-    
+
     @staticmethod
-    def parallel_encoding(in_q, out_q, ip, port, stream, encode, chunk_size, *args):
+    def parallel_encoding(
+        in_q, out_q, ip, port, stream, encode, chunk_size, *args
+    ):
         current_process = multiprocessing.current_process().name
         logger.info(f"{current_process}: Starting...")
 
-        count=0
+        count = 0
         last_tick = 0
         now = time.time()
         while True:
@@ -139,13 +140,12 @@ class FastTCPClient(TCPClient):
                     print(error)
                     print("Some problem happened during streaming. See error")
                 print(f"Done at {time.time() - now}")
-                count+=1
+                count += 1
                 if (t_ms - last_tick) > 1000:
                     last_tick = t_ms
                     logger.info(f"{current_process} framerate: {count}")
                     count = 0
-                #out_q.put(encoded_frame)
-
+                # out_q.put(encoded_frame)
 
     @staticmethod
     def dummy(in_q, *args):
@@ -155,23 +155,35 @@ class FastTCPClient(TCPClient):
         while True:
             t_ms, frame = in_q.get(block=True, timeout=2)
             time.sleep(1)
-        #current_process = multiprocessing.current_process().name
-        #logger.info(f"{current_process}: Starting...")
+        # current_process = multiprocessing.current_process().name
+        # logger.info(f"{current_process}: Starting...")
 
     def run(self):
-        processes=1
-        args = (self.in_q, self.out_q, self._ip, self._port,self.stream,  self.encode, self._CHUNK_SIZE, self._ENCODE_PARAM)
-        
+        processes = 1
+        args = (
+            self.in_q,
+            self.out_q,
+            self._ip,
+            self._port,
+            self.stream,
+            self.encode,
+            self._CHUNK_SIZE,
+            self._ENCODE_PARAM,
+        )
+
         frames_available = self.in_q.qsize()
         while frames_available == 0:
             time.sleep(1)
             frames_available = self.in_q.qsize()
 
         with multiprocessing.Pool(processes=processes) as pool:
-           #workers = pool.apply(self.parallel_encoding, args)
-           workers = [pool.apply_async(self.parallel_encoding, args) for i in range(processes)]
-           #workers = [pool.apply(self.dummy, args) for i in range(processes)]
-           [w.get() for w in workers]
+            # workers = pool.apply(self.parallel_encoding, args)
+            workers = [
+                pool.apply_async(self.parallel_encoding, args)
+                for i in range(processes)
+            ]
+            # workers = [pool.apply(self.dummy, args) for i in range(processes)]
+            [w.get() for w in workers]
 
     def has_stopped(self):
         return self._stop_event.is_set()
@@ -182,14 +194,13 @@ class FastTCPClient(TCPClient):
         time.sleep(1)
         self.close()
 
+
 if __name__ == "__main__":
-    frame = np.random.randint(255, size=(900,800,3),dtype=np.uint8)
-    TCP_IP = '10.43.207.46'
+    frame = np.random.randint(255, size=(900, 800, 3), dtype=np.uint8)
+    TCP_IP = "10.43.207.46"
     TCP_PORT = 8082
 
     client = TCPClient(TCP_IP, TCP_PORT)
     client.queue(frame)
     client.start()
     client.stop()
-
-

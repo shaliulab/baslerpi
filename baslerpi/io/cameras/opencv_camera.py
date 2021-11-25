@@ -15,23 +15,24 @@ console = logging.StreamHandler()
 console.setLevel(logging.INFO)
 logger.addHandler(console)
 
-class OpenCVCamera(BaseCamera):
 
-    def __init__(self, *args, video_path=None, wrap=False, greyworld=True, **kwargs):
+class OpenCVCamera(BaseCamera):
+    def __init__(
+        self, *args, video_path=None, wrap=False, greyworld=True, **kwargs
+    ):
 
         self._wrap = wrap
         self._time_s = 0
         self._wrap_s = 0
 
         if video_path is None or not os.path.isfile(video_path):
-            self._video_path = 0 # capture from a webcam
+            self._video_path = 0  # capture from a webcam
         else:
             self._video_path = video_path
 
         self._greyworld = greyworld
 
         super().__init__(*args, **kwargs)
-
 
     def is_last_frame(self):
         return False
@@ -61,12 +62,12 @@ class OpenCVCamera(BaseCamera):
             self.camera.set(cv2.CAP_PROP_POS_MSEC, 0)
             ret, img = self.camera.read()
 
-        #self._validate(img)
+        # self._validate(img)
         return img
 
     def open(self):
         try:
-            logger.debug('OpenCV camera opening')
+            logger.debug("OpenCV camera opening")
             self.camera = cv2.VideoCapture(self._video_path)
         except Exception as error:
             logger.error(error)
@@ -106,7 +107,6 @@ class OpenCVCamera(BaseCamera):
         self._resolution = (int(self.camera.get(3)), int(self.camera.get(4)))
         return self._resolution
 
-
     @resolution.setter
     def resolution(self, resolution):
         # TODO Is int needed here?
@@ -136,4 +136,6 @@ class OpenCVCamera(BaseCamera):
 
 
 if __name__ == "__main__":
-    import ipdb; ipdb.set_trace()
+    import ipdb
+
+    ipdb.set_trace()

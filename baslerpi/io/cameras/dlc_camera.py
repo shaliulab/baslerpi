@@ -19,8 +19,8 @@ class CameraError(Exception):
 
 
 class Camera(object):
-    """ Base camera class. Controls image capture, writing images to video, pose estimation and image display. 
-    
+    """Base camera class. Controls image capture, writing images to video, pose estimation and image display.
+
     Parameters
     ----------
     id : [type]
@@ -43,8 +43,7 @@ class Camera(object):
 
     @staticmethod
     def arg_restrictions():
-        """ Returns a dictionary of arguments restrictions for DLCLiveGUI
-        """
+        """Returns a dictionary of arguments restrictions for DLCLiveGUI"""
 
         return {}
 
@@ -58,7 +57,7 @@ class Camera(object):
         crop=None,
         fps=None,
         use_tk_display=False,
-        display_resize=1.0
+        display_resize=1.0,
     ):
         """
         Constructor method
@@ -77,12 +76,12 @@ class Camera(object):
 
     def set_im_size(self, res):
         """[summary]
-        
+
         Parameters
         ----------
         default : [, optional
             [description], by default None
-        
+
         Raises
         ------
         DLCLiveCameraError
@@ -99,14 +98,13 @@ class Camera(object):
         )
 
     def set_capture_device(self):
-        """ Sets frame capture device with desired properties
-        """
+        """Sets frame capture device with desired properties"""
 
         raise NotImplementedError
 
     def get_image_on_time(self):
-        """ Gets an image from frame capture device at the appropriate time (according to fps).
-        
+        """Gets an image from frame capture device at the appropriate time (according to fps).
+
         Returns
         -------
         `np.ndarray`
@@ -128,13 +126,11 @@ class Camera(object):
         return frame, timestamp
 
     def get_image(self):
-        """ Gets image from frame capture device
-        """
+        """Gets image from frame capture device"""
 
         raise NotImplementedError
 
     def close_capture_device(self):
-        """ Closes frame capture device
-        """
+        """Closes frame capture device"""
 
         raise NotImplementedError

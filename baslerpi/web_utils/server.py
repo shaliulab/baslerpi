@@ -11,6 +11,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 class TCPServer(threading.Thread):
     """
     Receive TCP requests in the background
@@ -34,14 +35,14 @@ class TCPServer(threading.Thread):
 
     @staticmethod
     def recvall(sock, count):
-        buf = b''
+        buf = b""
         while count:
             newbuf = sock.recv(count)
-            if not newbuf: return None
+            if not newbuf:
+                return None
             buf += newbuf
             count -= len(newbuf)
         return buf
-
 
     def run(self):
         while not self._stop.is_set():
@@ -52,7 +53,9 @@ class TCPServer(threading.Thread):
 
             if (time.time() - self._last_tick) > (self._TICK_PERIOD / 1000):
                 self._last_tick = time.time()
-                logger.info(f"Computed framerate {self._count / (self._TICK_PERIOD / 1000)}")
+                logger.info(
+                    f"Computed framerate {self._count / (self._TICK_PERIOD / 1000)}"
+                )
                 self._count = 0
 
     def receive(self):
@@ -61,7 +64,7 @@ class TCPServer(threading.Thread):
         length = self.recvall(conn, 16)
         try:
             stringData = self.recvall(conn, int(length))
-            data = np.frombuffer(stringData, dtype='uint8')
+            data = np.frombuffer(stringData, dtype="uint8")
         except TypeError:
             return False, None
         decimg = cv2.imdecode(data, 1)
@@ -87,9 +90,10 @@ class TCPServer(threading.Thread):
     def close(self):
         self._sock.close()
 
+
 if __name__ == "__main__":
 
-    TCP_IP = '0.0.0.0'
+    TCP_IP = "0.0.0.0"
     TCP_PORT = 8084
 
     tcp_server = TCPServer(TCP_IP, TCP_PORT)
@@ -106,4 +110,3 @@ if __name__ == "__main__":
         cv2.destroyAllWindows()
 
     sys.exit(0)
-
