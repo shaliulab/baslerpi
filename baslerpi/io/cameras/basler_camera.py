@@ -82,7 +82,6 @@ class BaslerCamera(BaseCamera):
                     pylon.TlFactory.GetInstance().CreateFirstDevice()
                 )
 
-
             self.camera.Open()
             self.configure()
             self.report()
@@ -98,7 +97,6 @@ class BaslerCamera(BaseCamera):
                 self.camera.StartGrabbingMax(
                     maxframes
                 )  # if we want to limit the number of frames
-
 
             _, img = self.grab()
             logger.info("Pylon camera opened successfully")
@@ -296,10 +294,13 @@ def main(args=None, ap=None):
     if args is None:
         ap = get_parser()
         ap.add_argument(
-            "--maxframes", default=5, help="Number of frames to be acquired", type=int
+            "--maxframes",
+            default=5,
+            help="Number of frames to be acquired",
+            type=int,
         )
         ap.add_argument(
-             "--verbose", choices=list(LEVELS.keys()), default="WARNING"
+            "--verbose", choices=list(LEVELS.keys()), default="WARNING"
         )
 
         args = ap.parse_args()

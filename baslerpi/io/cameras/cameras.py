@@ -140,7 +140,6 @@ class BaseCamera:
 
         return self._computed_framerate
 
-
     def _next_time_image(self):
         timestamp = self.time_stamp()
         image = self._next_image()
