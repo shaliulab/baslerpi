@@ -255,6 +255,12 @@ def get_parser(ap=None):
         default=25000,
         help="Exposure time in useconds (10^-6 s)",
     )
+    ap.add_argument(
+        "--preview",
+        action="store_true",
+        default=False
+    )
+
     return ap
 
 
@@ -296,6 +302,12 @@ def run(camera, queue=None):
             print("Basler camera reads: ", timestamp, frame.shape, frame.dtype, camera.computed_framerate)
             if queue is not None:
                 queue.put((timestamp, frame))
+
+            frame = cv2.resize(frame, (frame.shape[0]//3, frame.shape[1]//3), cv2.INTER_AREA)
+            cv2.imshow("Basler", frame)
+            if cv2.waitKey(1) == ord("q"):
+                break
+
     except KeyboardInterrupt:
         return
 
@@ -307,7 +319,7 @@ def setup_and_run(args, **kwargs):
     camera = setup_camera(args)
     maxframes = getattr(args, "maxframes", None)
     camera.open(maxframes=maxframes)
-    run(camera, **kwargs)
+    run(camera, preview=args.preview, **kwargs)
 
 
 def main(args=None, ap=None):
