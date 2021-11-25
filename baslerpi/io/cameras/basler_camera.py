@@ -18,6 +18,7 @@ from baslerpi.io.cameras.dlc_camera import Camera as DLCCamera
 
 
 logger = logging.getLogger("baslerpi.io.camera")
+LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
 
 
 class BaslerCamera(BaseCamera):
@@ -288,12 +289,32 @@ def setup_logger(level):
     logger.addHandler(console)
 
 
+def run(camera, queue=None):
+
+    try:
+        for timestamp, frame in camera:
+            print("Basler camera reads: ", timestamp, frame.shape, frame.dtype, camera.computed_framerate)
+            if queue is not None:
+                queue.put((timestamp, frame))
+    except KeyboardInterrupt:
+        return
+
+
+def setup_and_run(args, **kwargs):
+
+    level = LEVELS[args.verbose]
+    setup_logger(level=level)
+    camera = setup_camera(args)
+    maxframes = getattr(args, "maxframes", None)
+    camera.open(maxframes=maxframes)
+    run(camera, **kwargs)
+
+
 def main(args=None, ap=None):
     """
     Initialize a BaslerCamera
     """
 
-    LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
     if args is None:
         ap = get_parser(ap=ap)
         ap.add_argument(
@@ -308,18 +329,7 @@ def main(args=None, ap=None):
 
         args = ap.parse_args()
 
-    level = LEVELS[args.verbose]
-    setup_logger(level=level)
-
-    camera = setup_camera(args)
-    camera.open(maxframes=args.maxframes)
-
-    try:
-        for timestamp, frame in camera:
-            print("Basler camera: ", timestamp, frame.shape, frame.dtype, camera.computed_framerate)
-    except KeyboardInterrupt:
-        return
-
+    setup_and_run(args)
 
 if __name__ == "__main__":
     main()
