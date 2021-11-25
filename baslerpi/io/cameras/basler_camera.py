@@ -97,9 +97,11 @@ class BaslerCamera(BaseCamera):
                 self.camera.StartGrabbingMax(
                     maxframes
                 )  # if we want to limit the number of frames
+            else:
+                self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 
             _, img = self.grab()
-            logger.info("Pylon camera opened successfully")
+            logger.info("Basler camera opened successfully")
             self._start_time = time.time()
             logger.info(
                 "Resolution of incoming frames: %dx%d",
@@ -238,19 +240,20 @@ def get_parser(ap=None):
 
     if ap is None:
         ap = argparse.ArgumentParser()
-        ap.add_argument(
-            "--framerate",
-            type=int,
-            default=30,
-            help="Frames Per Second of the camera",
-        )
-        ap.add_argument(
-            "--exposure-time",
-            dest="exposure",
-            type=int,
-            default=25000,
-            help="Exposure time in useconds (10^-6 s)",
-        )
+
+    ap.add_argument(
+        "--framerate",
+        type=int,
+        default=30,
+        help="Frames Per Second of the camera",
+    )
+    ap.add_argument(
+        "--exposure-time",
+        dest="exposure",
+        type=int,
+        default=25000,
+        help="Exposure time in useconds (10^-6 s)",
+    )
     return ap
 
 
@@ -292,10 +295,10 @@ def main(args=None, ap=None):
 
     LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
     if args is None:
-        ap = get_parser()
+        ap = get_parser(ap=ap)
         ap.add_argument(
             "--maxframes",
-            default=5,
+            default=None,
             help="Number of frames to be acquired",
             type=int,
         )
@@ -305,13 +308,14 @@ def main(args=None, ap=None):
 
         args = ap.parse_args()
 
-        level = LEVELS[args.verbose]
-        setup_logger(level=level)
+    level = LEVELS[args.verbose]
+    setup_logger(level=level)
 
     camera = setup_camera(args)
-    camera.open(maxframes=getattr(args, "maxframes", 5))
+    camera.open(maxframes=args.maxframes)
+
     for timestamp, frame in camera:
-        print(timestamp, frame.shape, frame.dtype, camera.computed_framerate)
+        print("Basler camera: ", timestamp, frame.shape, frame.dtype, camera.computed_framerate)
 
 
 if __name__ == "__main__":

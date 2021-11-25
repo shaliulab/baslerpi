@@ -9,16 +9,17 @@ import yaml
 import os.path
 import sys
 
-from baslerpi.io.recorders import setup_recorder
-from baslerpi.io.recorders import get_parser as recorder_parser
-from baslerpi.io.cameras import setup_camera
-from baslerpi.io.cameras import get_parser as camera_parser
+from baslerpi.io.recorders.record import setup_recorder
+from baslerpi.io.recorders.record import get_parser as recorder_parser
+from baslerpi.io.cameras.basler_camera import setup_camera
+from baslerpi.io.cameras.basler_camera import get_parser as camera_parser
 
 
 def get_parser(ap=None):
 
     if ap is None:
         ap = argparse.ArgumentParser()
+
     ap.add_argument(
         "--config",
         help="Config file in json format",
@@ -26,6 +27,7 @@ def get_parser(ap=None):
     )
     ap.add_argument("-D", "--debug", dest="debug", action="store_true")
     ap.add_argument("--preview", action="store_true")
+
     return ap
 
 
@@ -79,7 +81,7 @@ def run(recorder):
 def main(args=None, ap=None):
 
     if args is None:
-        ap = get_parser(ap)
+        ap = get_parser(ap=ap)
         args = ap.parse_args()
 
     recorder = setup(args)
