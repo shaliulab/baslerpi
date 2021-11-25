@@ -239,6 +239,7 @@ class BaslerCamera(BaseCamera):
 
 def get_parser(ap=None):
 
+
     if ap is None:
         ap = argparse.ArgumentParser()
 
@@ -295,7 +296,7 @@ def setup_logger(level):
     logger.addHandler(console)
 
 
-def run(camera, queue=None):
+def run(camera, queue=None, preview=False):
 
     try:
         for timestamp, frame in camera:
@@ -303,10 +304,11 @@ def run(camera, queue=None):
             if queue is not None:
                 queue.put((timestamp, frame))
 
-            frame = cv2.resize(frame, (frame.shape[0]//3, frame.shape[1]//3), cv2.INTER_AREA)
-            cv2.imshow("Basler", frame)
-            if cv2.waitKey(1) == ord("q"):
-                break
+            frame = cv2.resize(frame, (frame.shape[1]//3, frame.shape[0]//3), cv2.INTER_AREA)
+            if preview:
+                cv2.imshow("Basler", frame)
+                if cv2.waitKey(1) == ord("q"):
+                    break
 
     except KeyboardInterrupt:
         return
