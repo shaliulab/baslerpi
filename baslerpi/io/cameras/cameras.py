@@ -27,6 +27,7 @@ class BaseCamera:
         drop_each=1,
         use_wall_clock=False,
         timeout=30000,
+        resolution_decrease=None
     ):
         """
         The template class to generate and use video streams.
@@ -67,7 +68,7 @@ class BaseCamera:
         self._start_time = None
         self._target_framerate = framerate
         self._computed_framerate = 0
-        self._framerate = 0
+        self._framerate = framerate
         self._target_exposuretime = exposure
         self._exposuretime = 0
         self._drop_each = drop_each
@@ -76,6 +77,7 @@ class BaseCamera:
         self._frames_this_second = 0
         self._last_tick = 0
         self.failed_count = 0
+        self._resolution_decrease = resolution_decrease
 
     def time_stamp(self):
         if self._start_time is None:
@@ -93,14 +95,17 @@ class BaseCamera:
         self.close()
 
     def __str__(self):
-        template = "%s: %s FPS, ET %s ms (target %s FPS, %s ms)"
-        return template % (
-            self.__class__.__name__,
-            str(self._framerate).zfill(4),
-            str(self._exposuretime).zfill(8),
-            str(self._target_framerate).zfill(4),
-            str(self._target_exposuretime).zfill(8),
-        )
+        return f"{self.__class__.__name__} camera @ {self.framerate}"
+
+    # def __str__(self):
+    #     template = "%s: %s FPS, ET %s ms (target %s FPS, %s ms)"
+    #     return template % (
+    #         self.__class__.__name__,
+    #         str(self._framerate).zfill(4),
+    #         str(self._exposuretime).zfill(8),
+    #         str(self._target_framerate).zfill(4),
+    #         str(self._target_exposuretime).zfill(8),
+    #     )
 
     def __iter__(self):
         """
@@ -111,24 +116,29 @@ class BaseCamera:
         """
         at_least_one_frame = False
 
-        while not self.stopped:
-            if self.is_last_frame() or not self.is_open():
-                if not at_least_one_frame:
-                    raise Exception("Camera could not read the first frame")
-                break
-            time_s, out = self._next_time_image()
+        try:
+            while not self.stopped:
+                if self.is_last_frame() or not self.is_open():
+                    if not at_least_one_frame:
+                        raise Exception("Camera could not read the first frame")
+                    break
+                time_s, out = self._next_time_image()
 
-            if out is None:
-                break
+                if out is None:
+                    break
 
-            t_ms = int(1000 * time_s)
-            at_least_one_frame = True
+                t_ms = int(1000 * time_s)
+                at_least_one_frame = True
 
-            if (self._frame_idx % self._drop_each) == 0:
-                logger.debug("Yielding frame")
-                self._count += 1
+                if (self._frame_idx % self._drop_each) == 0:
+                    logger.debug("Yielding frame")
+                    self._count += 1
 
-                yield t_ms, out
+                    yield t_ms, out
+            
+        except KeyboardInterrupt:
+            self.close()
+
 
     @property
     def computed_framerate(self):

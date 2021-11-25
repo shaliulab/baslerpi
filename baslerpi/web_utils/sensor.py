@@ -30,3 +30,10 @@ class QuerySensor:
     def get_humidity(self):
         data = self.query()
         return data["humidity"]
+
+def setup(args):
+    if args.sensor is None:
+        sensor = None
+    else:
+        sensor = QuerySensor(args.sensor)
+    return sensor

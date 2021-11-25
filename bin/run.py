@@ -1,47 +1,31 @@
+import argparse
+import datetime
 import logging
 import logging.config
-import math
-from inspect import signature
-import argparse
 import json
-import datetime
-import yaml
+import math
 import os.path
-import sys
+import json
 
-from baslerpi.io.recorders.record import setup_recorder
-from baslerpi.io.recorders.record import get_parser as recorder_parser
-from baslerpi.io.cameras.basler_camera import setup_camera
+from baslerpi.io.cameras.basler_camera import setup as setup_camera
 from baslerpi.io.cameras.basler_camera import get_parser as camera_parser
+from baslerpi.io.recorders.record import setup as setup_recorder
+from baslerpi.io.recorders.record import RECORDERS
+from baslerpi.io.recorders.record import get_parser as recorder_parser
+from baslerpi.io.recorders.record import run as run_recorder
+from baslerpi.web_utils.sensor import setup as setup_sensor
 
 
-def get_parser(ap=None):
+LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
+logger = logging.getLogger(__name__)
 
-    if ap is None:
-        ap = argparse.ArgumentParser()
+def setup_logger(level):
 
-    ap.add_argument(
-        "--config",
-        help="Config file in json format",
-        default="/etc/flyhostel.conf",
-    )
-    ap.add_argument("-D", "--debug", dest="debug", action="store_true")
-    ap.add_argument("--preview", action="store_true")
-
-    return ap
-
-
-def setup_logging():
-
-    with open("/etc/baslerpi.yaml", "r") as fh:
-        try:
-            logging_config = yaml.safe_load(fh)
-            logging.config.dictConfig(logging_config)
-        except yaml.YAMLError as error:
-            raise error
-
-    return logging
-
+    logger = logging.getLogger(__name__)
+    logger.setLevel(level)
+    console = logging.StreamHandler()
+    console.setLevel(level)
+    logger.addHandler(console)
 
 def load_config(args):
     with open(args.config, "r") as fh:
@@ -52,44 +36,32 @@ def load_config(args):
 
 def setup(args):
 
-    logging = setup_logging()
+    level = LEVELS[args.verbose]
+    setup_logger(level=level)
     config = load_config(args)
-    RecorderClass, output = setup_recorder(args)
+    sensor = setup_sensor(args)
     camera = setup_camera(args)
     camera.open()
-    recorder = setup_recorder(camera, sensor, args)
-
-    output = os.path.join(config["videos"]["folder"], output)
-    recorder.open(path=output, fmt=args.fmt)
-
-    return recorder
+    recorder = setup_recorder(args, camera, sensor)
+    return config, recorder
 
 
-def run(recorder):
-
-    try:
-        recorder.start()
-        recorder.join()
-    except KeyboardInterrupt:
-        recorder._stop_event.set()
-
-    finally:
-        recorder.close()
-        recorder.join()
+def setup_and_run(args, **kwargs):
+    
+    config, recorder = setup(args)
+    output = os.path.join(config["videos"]["folder"], args.output)
+    run_recorder(recorder, fmt=args.fmt, path=output)
 
 
 def main(args=None, ap=None):
-
+    
     if args is None:
-        ap = get_parser(ap=ap)
+        ap = recorder_parser(ap=ap)
+        ap = camera_parser(ap=ap)
         args = ap.parse_args()
 
-    recorder = setup(args)
-    run(recorder)
+    setup_and_run(args, output=args.output)
 
 
 if __name__ == "__main__":
-
-    ap = camera_parser()
-    ap = recorder_parser(ap=ap)
-    main(ap=ap)
+    main()

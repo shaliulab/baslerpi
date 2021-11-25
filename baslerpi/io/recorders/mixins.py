@@ -94,8 +94,7 @@ class OpenCVMixin:
             output_dir = self._path
 
         self._output_dir = output_dir
-        if not os.path.isdir(self._output_dir) and self._debug:
-            os.mkdir(self._output_dir)
+        os.makedirs(self._output_dir, exist_ok=True)
 
         # Initialize video writer
         self._video_writer = cv2.VideoWriter(
@@ -160,7 +159,7 @@ class ImgstoreMixin:
     """
     Teach a Recorder class how to use Imgstore to write a video
     """
-
+    _CHUNK_DURATION_SECONDS = 300 
     _dtype = np.uint8
     # look here for possible formats:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
@@ -168,7 +167,7 @@ class ImgstoreMixin:
     _asyncWriterClass = AsyncWriter
     # if you dont have enough RAM, you dont want to make this number huge
     # otherwise you will run out of RAM
-    _CACHE_SIZE = 1e2
+    _CACHE_SIZE = 1e3
 
     def _save_extra_data(self, **kwargs):
         store = self._async_writer._video_writer
@@ -213,11 +212,10 @@ class ImgstoreMixin:
                 time=timestamp,
             )
 
-    def open(self, path, maxframes=None, **kwargs):
+    def open(self, path, **kwargs):
 
         self._path = path
-        self._video_duration_seconds = 300
-        self._chunksize = self._video_duration_seconds * self._framerate
+        self._chunksize = self._CHUNK_DURATION_SECONDS * self._framerate
 
         async_writer_kwargs = {
             "framerate": self._framerate,
@@ -237,7 +235,7 @@ class ImgstoreMixin:
         self._last_chunk = -1
 
         self._async_writer = self._asyncWriterClass(
-            self._queue, self._stop_queue, **kwargs
+            queue=self._queue, stop_queue=self._stop_queue, **kwargs
         )
 
         # Report information to user
@@ -248,7 +246,7 @@ class ImgstoreMixin:
         logger.info("  Chunksize: %s", self._chunksize)
 
         self._async_writer.start()
-        self._tqdm = tqdm.tqdm(position=1, total=100, unit="")
+        self._tqdm = tqdm.tqdm(position=self.idx, total=self._CACHE_SIZE, unit="", desc=f"{self.camera}" + r" % Buffer usage")
         self._last_cache_accumulated = 0
 
     def has_new_chunk(self):
@@ -286,7 +284,7 @@ class ImgstoreMixin:
 
     @property
     def usage(self):
-        return 100 * self._queue.qsize() / self._CACHE_SIZE
+        return self._queue.qsize()# / self._CACHE_SIZE
 
     def _info(self):
         # logger.info("Usage: {self.usage}%")

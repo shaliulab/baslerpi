@@ -1,26 +1,19 @@
+import argparse
+import datetime
 import math
 import threading
 import time
 import logging
-import tqdm
-import numpy as np
+
+import cv2
 
 from baslerpi.io.recorders.mixins import (
-    OpenCVMixin,
     FFMPEGMixin,
     ImgstoreMixin,
 )
-from baslerpi.web_utils.sensor import QuerySensor
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-logger.addHandler(console)
-
-logger.info("Loading recorder... ")
-
-from baslerpi.io.cameras import BaslerCamera
+logger = logging.getLogger("baslerpi.io.record")
+LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
 
 
 class BaseRecorder(threading.Thread):
@@ -39,11 +32,13 @@ class BaseRecorder(threading.Thread):
         sensor=None,
         compressor=None,
         framerate=None,
-        duration=300,
+        duration=math.inf,
         maxframes=math.inf,
         verbose=False,
         encoder="libx264",
         crf="18",
+        preview=False,
+        idx = 0,
         **kwargs
     ):
         """
@@ -69,6 +64,8 @@ class BaseRecorder(threading.Thread):
         # only for FFMPEGRecorder
         self._encoder = encoder
         self._crf = crf
+        self._preview = preview
+        self.idx = idx
 
         self.last_tick = 0
         super().__init__(*args, **kwargs)
@@ -94,7 +91,7 @@ class BaseRecorder(threading.Thread):
     def save_extra_data(self, *args, **kwargs):
         return None
 
-    def writeFrame(frame, timestamp):
+    def writeFrame(self, frame, timestamp):
         self.write(frame, self._framecount, timestamp)
         self._framecount += 1
 
@@ -110,6 +107,11 @@ class BaseRecorder(threading.Thread):
 
             if self.should_stop:
                 break
+
+            if self._preview:
+                cv2.imshow("Frame", frame)
+                if cv2.waitKey(1) == ord("q"):
+                    break
 
             self.save_extra_data(timestamp)
             self.writeFrame(frame, timestamp)
@@ -177,12 +179,48 @@ RECORDERS = {
     "OpenCV": BaseRecorder,
 }
 
+def setup(args, camera, sensor, idx=0):
+
+    RecorderClass = RECORDERS[args.recorder]
+
+    recorder = RecorderClass(
+        camera,
+        framerate=int(camera.framerate),
+        duration=args.duration,
+        maxframes=args.maxframes,
+        sensor=sensor,
+        crf=args.crf,
+        encoder=args.encoder,
+        preview=args.preview,
+        verbose=args.verbose,
+        idx=idx
+    )
+
+    return recorder
+
+def run(recorder, **kwargs):
+
+    # print("Opening recorder")
+    recorder.open(**kwargs)
+    # print("Starting recorder")
+
+    try:
+        recorder.start()
+        recorder.join()
+    except KeyboardInterrupt:
+        pass
+    recorder.close()
 
 def get_parser(ap=None):
 
     if ap is None:
-        ap = argparse.ArgumentParser()
+        ap = argparse.ArgumentParser(conflict_handler="resolve")
 
+    ap.add_argument(
+        "--config",
+        help="Config file in json format",
+        default="/etc/flyhostel.conf",
+    )
     ap.add_argument(
         "--output",
         default=datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
@@ -195,71 +233,14 @@ def get_parser(ap=None):
         required=False,
     )
     ap.add_argument("--sensor", type=int, default=None)
-    gp = ap.add_mutually_exclusive_group()
-    gp.add_argument(
-        "--duration",
-        type=int,
-        default=300,
-        help="Camera fetches this amount of frames at max",
-    )
-    gp.add_argument(
-        "--maxframes",
-        type=int,
-        default=math.inf,
-        help="Camera fetches frames (s)",
-    )
+    ap.add_argument("--duration", type=int, default=math.inf)
     ap.add_argument("--encoder", type=str)
+    ap.add_argument("--fmt", type=str, default="mjpeg/avi")
     ap.add_argument("--crf", type=int)
     ap.add_argument(
         "--recorder", choices=list(RECORDERS.keys()), default="ImgStore"
     )
     ap.add_argument(
-        "--verbose", dest="verbose", action="store_true", default=False
+        "--verbose", choices=list(LEVELS.keys()), default="WARNING"
     )
     return ap
-
-
-def setup_sensor(args):
-    if args.sensor is None:
-        sensor = None
-    else:
-        sensor = QuerySensor(args.sensor)
-    return sensor
-
-
-def setup_recorder(args):
-
-    RecorderClass = RECORDERS[args.recorder]
-    sensor = setup_sensor(args)
-
-    recorder = RecorderClass(
-        camera,
-        framerate=args.fps,
-        duration=args.duration,
-        maxframes=args.maxframes,
-        sensor=sensor,
-        crf=args.crf,
-        encoder=args.encoder,
-        verbose=args.verbose,
-    )
-
-    return recorder
-
-
-def main(args=None, ap=None):
-
-    if args is None:
-        ap = get_parser(ap)
-        args = ap.parse_args()
-
-    output = args.output
-
-    recorder = setup_recorder(args)
-    recorder.open(path=output)
-    recorder.start()
-    recorder.join()
-    recorder.close()
-
-
-if __name__ == "__main__":
-    main()
