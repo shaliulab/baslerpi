@@ -1,4 +1,5 @@
 # Standard library
+import argparse
 import logging
 import os
 import os.path
@@ -15,11 +16,8 @@ from baslerpi.decorators import drive_basler
 from baslerpi.io.cameras.cameras import BaseCamera
 from baslerpi.io.cameras.dlc_camera import Camera as DLCCamera
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-logger.addHandler(console)
+
+logger = logging.getLogger("baslerpi.io.camera")
 
 
 class BaslerCamera(BaseCamera):
@@ -83,6 +81,8 @@ class BaslerCamera(BaseCamera):
                 self.camera = pylon.InstantCamera(
                     pylon.TlFactory.GetInstance().CreateFirstDevice()
                 )
+
+
             self.camera.Open()
             self.configure()
             self.report()
@@ -91,13 +91,14 @@ class BaslerCamera(BaseCamera):
             logger.info(
                 "Using device %s", self.camera.GetDeviceInfo().GetModelName()
             )
+
+            self.camera.MaxNumBuffer = buffersize
+
             if maxframes is not None:
                 self.camera.StartGrabbingMax(
                     maxframes
                 )  # if we want to limit the number of frames
 
-            self.camera.MaxNumBuffer = buffersize
-            self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 
             _, img = self.grab()
             logger.info("Pylon camera opened successfully")
@@ -278,22 +279,38 @@ def setup_camera(args=None):
     return camera
 
 
+def setup_logger(level):
+    logger = logging.getLogger("baslerpi.io.camera")
+    logger.setLevel(level)
+    console = logging.StreamHandler()
+    console.setLevel(level)
+    logger.addHandler(console)
+
+
 def main(args=None, ap=None):
     """
     Initialize a BaslerCamera
     """
 
+    LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
     if args is None:
         ap = get_parser()
         ap.add_argument(
-            "--maxframes", default=5, help="Number of frames to be acquired"
+            "--maxframes", default=5, help="Number of frames to be acquired", type=int
         )
+        ap.add_argument(
+             "--verbose", choices=list(LEVELS.keys()), default="WARNING"
+        )
+
         args = ap.parse_args()
+
+        level = LEVELS[args.verbose]
+        setup_logger(level=level)
 
     camera = setup_camera(args)
     camera.open(maxframes=getattr(args, "maxframes", 5))
-    for timestamp, frame in self.camera:
-        print(t, frame.shape, frame.dtype)
+    for timestamp, frame in camera:
+        print(timestamp, frame.shape, frame.dtype, camera.computed_framerate)
 
 
 if __name__ == "__main__":

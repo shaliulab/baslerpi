@@ -39,7 +39,7 @@ setup(
     # ],
     packages=find_packages(),
     # include_package_data=True,
-    install_requires=["gitpython", "opencv-python"],
+    install_requires=["gitpython", "opencv-python", "pyaml"],
     entry_points={
         "console_scripts": [
             "baslerpi=bin.run:main",

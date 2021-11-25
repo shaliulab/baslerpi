@@ -5,7 +5,7 @@ import logging.config
 import time
 import math
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("baslerpi.io.camera")
 
 from baslerpi.utils import read_config_yaml
 
@@ -137,7 +137,9 @@ class BaseCamera:
             self._computed_framerate = self._frames_this_second
             logger.info(f"FPS={self._frames_this_second}")
             self._frames_this_second = 0
-            return self._computed_framerate
+
+        return self._computed_framerate
+
 
     def _next_time_image(self):
         timestamp = self.time_stamp()
