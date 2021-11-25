@@ -52,12 +52,14 @@ def setup(args):
 
     logging = setup_logging()
     config = load_config(args)
-    RecorderClass, OUTPUT = setup_recorder(args)
+    RecorderClass, output = setup_recorder(args)
     camera = setup_camera(args)
     camera.open()
     recorder = setup_recorder(camera, sensor, args)
+    
+    output = os.path.join(config["videos"]["folder"], output)
     recorder.open(
-        path=os.path.join(config["videos"]["folder"], OUTPUT), fmt="mjpeg/avi"
+        path=output, fmt=args.fmt
     )
 
     return recorder

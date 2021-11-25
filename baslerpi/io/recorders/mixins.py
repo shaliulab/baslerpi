@@ -67,7 +67,7 @@ class OpenCVMixin:
     Teach a Recorder class how to use OpenCV to write a video
     """
 
-    def open(self, path, maxframes=None):
+    def open(self, path, maxframes=None, **kwargs):
         """
         Open a cv2.VideoWriter to the specified path
         Only .avi supported
@@ -126,6 +126,7 @@ class AsyncWriter(threading.Thread):
         # Initialize video writer
         self._queue = queue
         self._stop_queue = stop_queue
+        self._fmt = fmt
         # keys = list(inspect.signature(imgstore.new_for_format).parameters.keys())
         # imgstore_kwargs = {k: kwargs.pop(k) for k in keys if k in kwargs}
         # print(imgstore_kwargs)
@@ -212,21 +213,13 @@ class ImgstoreMixin:
                 time=timestamp,
             )
 
-    def open(self, path, fmt="h264/avi", maxframes=None):
+    def open(self, path, maxframes=None, **kwargs):
 
         self._path = path
-        self._fmt = fmt
         self._video_duration_seconds = 300
         self._chunksize = self._video_duration_seconds * self._framerate
 
-        # Report information to user
-        logger.info("Initializing Imgstore video with following properties:")
-        logger.info("  Resolution: %dx%d", *self.resolution)
-        logger.info("  Path: %s", self._path)
-        logger.info("  Format (codec): %s", self._fmt)
-        logger.info("  Chunksize: %s", self._chunksize)
-
-        kwargs = {
+        async_writer_kwargs = {
             "framerate": self._framerate,
             "mode": "w",
             "basedir": self._path,
@@ -237,12 +230,23 @@ class ImgstoreMixin:
             "chunksize": self._chunksize,
         }
 
+        kwargs.update(async_writer_kwargs)
+
         self._queue = queue.Queue(maxsize=self._CACHE_SIZE)
         self._stop_queue = queue.Queue()
         self._last_chunk = -1
-        self._async_writer = AsyncWriter(
-            self._fmt, self._queue, self._stop_queue, **kwargs
+
+        self._async_writer = self._asyncWriterClass(
+            self._queue, self._stop_queue, **kwargs
         )
+
+        # Report information to user
+        logger.info("Initializing Imgstore video with following properties:")
+        logger.info("  Resolution: %dx%d", *self.resolution)
+        logger.info("  Path: %s", self._path)
+        logger.info("  Format (codec): %s", self._async_writer._fmt)
+        logger.info("  Chunksize: %s", self._chunksize)
+
         self._async_writer.start()
         self._tqdm = tqdm.tqdm(position=1, total=100, unit="")
         self._last_cache_accumulated = 0

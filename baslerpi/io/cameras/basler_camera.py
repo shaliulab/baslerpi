@@ -258,6 +258,7 @@ def get_parser(ap=None):
 def get_dynamic_camera_kwargs(args):
 
     """
+    DEPRECATED
     Filter the input args so only kwargs of the BaslerCamera class init
     or any of its parents are returned
     """

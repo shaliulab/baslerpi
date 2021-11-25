@@ -42,7 +42,7 @@ setup(
     install_requires=[],
     entry_points={
         "console_scripts": [
-            "baslerpi=scripts.run:main",
+            "baslerpi=bin.run:main",
             "baslerpi-test=scripts.test_camera:main",
         ]
     },
