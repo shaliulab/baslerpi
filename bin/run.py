@@ -56,11 +56,9 @@ def setup(args):
     camera = setup_camera(args)
     camera.open()
     recorder = setup_recorder(camera, sensor, args)
-    
+
     output = os.path.join(config["videos"]["folder"], output)
-    recorder.open(
-        path=output, fmt=args.fmt
-    )
+    recorder.open(path=output, fmt=args.fmt)
 
     return recorder
 

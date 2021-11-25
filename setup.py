@@ -39,11 +39,11 @@ setup(
     # ],
     packages=find_packages(),
     # include_package_data=True,
-    install_requires=[],
+    install_requires=["gitpython", "opencv-python"],
     entry_points={
         "console_scripts": [
             "baslerpi=bin.run:main",
-            "baslerpi-test=scripts.test_camera:main",
+            "baslerpi-test=baslerpi.io.cameras.basler_camera:main",
         ]
     },
 )

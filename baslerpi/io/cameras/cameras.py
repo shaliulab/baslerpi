@@ -27,7 +27,6 @@ class BaseCamera:
         drop_each=1,
         use_wall_clock=False,
         timeout=30000,
-        preview=False,
     ):
         """
         The template class to generate and use video streams.
@@ -74,17 +73,20 @@ class BaseCamera:
         self._drop_each = drop_each
         self._timeout = timeout
         self._count = 0
-        self._preview = preview
+        self._frames_this_second = 0
+        self._last_tick = 0
         self.failed_count = 0
 
     def time_stamp(self):
         if self._start_time is None:
             return 0
         elif self._use_wall_clock:
-            return time.time()
+            self._time_s = time.time()
         else:
             now = time.time()
-            return now - self._start_time
+            self._time_s = now - self._start_time
+
+        return self._time_s
 
     def __exit__(self):  # pylint: disable=unexpected-special-method-signature
         logger.info("Closing camera")
@@ -125,16 +127,23 @@ class BaseCamera:
             if (self._frame_idx % self._drop_each) == 0:
                 logger.debug("Yielding frame")
                 self._count += 1
+
                 yield t_ms, out
 
     @property
     def computed_framerate(self):
-        return self._computed_framerate
+        if (self._last_tick + 1) < self._time_s:
+            self._last_tick = self._time_s
+            self._computed_framerate = self._frames_this_second
+            logger.info(f"FPS={self._frames_this_second}")
+            self._frames_this_second = 0
+            return self._computed_framerate
 
     def _next_time_image(self):
         timestamp = self.time_stamp()
         image = self._next_image()
         self._frame_idx += 1
+        self._frames_this_second += 1
         return timestamp, image
 
     def _load_message(self):
