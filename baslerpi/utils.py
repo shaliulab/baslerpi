@@ -31,12 +31,9 @@ def read_config_yaml(path):
 
 def document_for_reproducibility(recorder):
 
-    answer = input("Add now any metadata that needs to be entered manually: ")
-
     metadata = {
         "exposure-time": recorder.camera.exposuretime,
         "framerate": recorder.camera.framerate,
-        "notes": answer,
         "python-version": sys.version,
         "baslerpi-version": baslerpi.__version__,
         "imgstore-version": imgstore.__version__, # for imgstore writer
