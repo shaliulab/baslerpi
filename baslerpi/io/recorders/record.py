@@ -202,7 +202,7 @@ def setup(args, camera, sensor, idx=0):
 
 def run(recorder, **kwargs):
 
-    kwargs.update(document(recorder))
+    kwargs.update(document_for_reproducibility(recorder))
     # print("Opening recorder")
     recorder.open(**kwargs)
     # print("Starting recorder")
