@@ -7,6 +7,8 @@ import logging
 
 import cv2
 
+from baslerpi.utils import document_for_reproducibility
+
 from baslerpi.io.recorders.mixins import (
     FFMPEGMixin,
     ImgstoreMixin,
@@ -200,6 +202,7 @@ def setup(args, camera, sensor, idx=0):
 
 def run(recorder, **kwargs):
 
+    kwargs.update(document(recorder))
     # print("Opening recorder")
     recorder.open(**kwargs)
     # print("Starting recorder")

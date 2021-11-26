@@ -50,7 +50,7 @@ def setup_and_run(args, **kwargs):
     
     config, recorder = setup(args)
     output = os.path.join(config["videos"]["folder"], args.output)
-    run_recorder(recorder, fmt=args.fmt, path=output)
+    run_recorder(recorder, fmt=args.fmt, path=output, **kwargs)
 
 
 def main(args=None, ap=None):
