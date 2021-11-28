@@ -227,7 +227,7 @@ class ImgstoreMixin:
             ],  # reverse order so it becomes nrows x ncols i.e. height x width
             "imgdtype": self._dtype,
             "chunksize": self._chunksize,
-            "ROI": self._ROI,
+            "ROI": self._camera._ROI,
         }
 
         kwargs.update(async_writer_kwargs)
