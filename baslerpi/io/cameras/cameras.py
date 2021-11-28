@@ -14,6 +14,7 @@ from baslerpi.utils import read_config_yaml
 
 # Tell pylint everything here is abstract classes
 # pylint: disable=W0223
+import cv2
 
 
 class BaseCamera:
@@ -27,7 +28,7 @@ class BaseCamera:
         drop_each=1,
         use_wall_clock=False,
         timeout=30000,
-        resolution_decrease=None
+        resolution_decrease=None,
     ):
         """
         The template class to generate and use video streams.
@@ -78,6 +79,16 @@ class BaseCamera:
         self._last_tick = 0
         self.failed_count = 0
         self._resolution_decrease = resolution_decrease
+        self._ROI = None
+
+    def select_ROI(self):
+
+        if self.is_open():
+
+            img = self._next_image()
+            self._ROI = cv2.selectROI("select the area", img)
+        else:
+            logger.warning(f"{self} is not open")
 
     def time_stamp(self):
         if self._start_time is None:
@@ -120,7 +131,9 @@ class BaseCamera:
             while not self.stopped:
                 if self.is_last_frame() or not self.is_open():
                     if not at_least_one_frame:
-                        raise Exception("Camera could not read the first frame")
+                        raise Exception(
+                            "Camera could not read the first frame"
+                        )
                     break
                 time_s, out = self._next_time_image()
 
@@ -135,10 +148,9 @@ class BaseCamera:
                     self._count += 1
 
                     yield t_ms, out
-            
+
         except KeyboardInterrupt:
             self.close()
-
 
     @property
     def computed_framerate(self):

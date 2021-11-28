@@ -40,7 +40,7 @@ class BaseRecorder(threading.Thread):
         encoder="libx264",
         crf="18",
         preview=False,
-        idx = 0,
+        idx=0,
         **kwargs
     ):
         """
@@ -181,6 +181,7 @@ RECORDERS = {
     "OpenCV": BaseRecorder,
 }
 
+
 def setup(args, camera, sensor, idx=0):
 
     RecorderClass = RECORDERS[args.recorder]
@@ -195,10 +196,11 @@ def setup(args, camera, sensor, idx=0):
         encoder=args.encoder,
         preview=args.preview,
         verbose=args.verbose,
-        idx=idx
+        idx=idx,
     )
 
     return recorder
+
 
 def run(recorder, **kwargs):
 
@@ -213,6 +215,7 @@ def run(recorder, **kwargs):
     except KeyboardInterrupt:
         pass
     recorder.close()
+
 
 def get_parser(ap=None):
 

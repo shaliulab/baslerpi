@@ -19,6 +19,7 @@ from baslerpi.web_utils.sensor import setup as setup_sensor
 LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
 logger = logging.getLogger(__name__)
 
+
 def setup_logger(level):
 
     logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ def setup_logger(level):
     console = logging.StreamHandler()
     console.setLevel(level)
     logger.addHandler(console)
+
 
 def load_config(args):
     with open(args.config, "r") as fh:
@@ -47,14 +49,14 @@ def setup(args):
 
 
 def setup_and_run(args, **kwargs):
-    
+
     config, recorder = setup(args)
     output = os.path.join(config["videos"]["folder"], args.output)
     run_recorder(recorder, fmt=args.fmt, path=output, **kwargs)
 
 
 def main(args=None, ap=None):
-    
+
     if args is None:
         ap = recorder_parser(ap=ap)
         ap = camera_parser(ap=ap)

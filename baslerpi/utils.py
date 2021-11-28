@@ -28,7 +28,6 @@ def read_config_yaml(path):
     return config
 
 
-
 def document_for_reproducibility(recorder):
 
     metadata = {
@@ -36,9 +35,9 @@ def document_for_reproducibility(recorder):
         "framerate": recorder.camera.framerate,
         "python-version": sys.version,
         "baslerpi-version": baslerpi.__version__,
-        "imgstore-version": imgstore.__version__, # for imgstore writer
-        "skvideo-version": skvideo.__version__, # for ffmpeg writer
-        "cv2-version": cv2.__version__
+        "imgstore-version": imgstore.__version__,  # for imgstore writer
+        "skvideo-version": skvideo.__version__,  # for ffmpeg writer
+        "cv2-version": cv2.__version__,
     }
 
     return metadata

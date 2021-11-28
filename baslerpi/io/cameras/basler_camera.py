@@ -28,7 +28,6 @@ class BaslerCamera(BaseCamera):
     REVERSE_X = True
     REVERSE_Y = True
 
-
     r"""
     Drive a Basler camera using pypylon.
 
@@ -60,7 +59,7 @@ class BaslerCamera(BaseCamera):
         self.camera.ReverseY.SetValue(self.REVERSE_Y)
         self.camera.Width.SetValue(self._width)
         self.camera.Height.SetValue(self._height)
-        
+
     def grab(self):
 
         grabResult = self.camera.RetrieveResult(
@@ -71,19 +70,23 @@ class BaslerCamera(BaseCamera):
             img = grabResult.Array
             grabResult.Release()
             if self._resolution_decrease not in [1, None]:
-                img = cv2.resize(img, (
-                    img.shape[1]//self._resolution_decrease,
-                    img.shape[0]//self._resolution_decrease
-                ), cv2.INTER_AREA)
-       
+                img = cv2.resize(
+                    img,
+                    (
+                        img.shape[1] // self._resolution_decrease,
+                        img.shape[0] // self._resolution_decrease,
+                    ),
+                    cv2.INTER_AREA,
+                )
+
         else:
             img = None
             self.failed_count += 1
             logger.debug(
-                "Pylon could not fetch next frame. Trial no %d", self.failed_count
+                "Pylon could not fetch next frame. Trial no %d",
+                self.failed_count,
             )
 
-        
         return status, img
 
     def open(self, maxframes=None, buffersize=5):
@@ -126,7 +129,7 @@ class BaslerCamera(BaseCamera):
                 self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 
             status, img = self.grab()
-            
+
             if status and img is not None:
 
                 logger.info("Basler camera opened successfully")
@@ -146,7 +149,7 @@ class BaslerCamera(BaseCamera):
 
         return True
 
-    def _next_image(self):
+    def _next_image_raw(self):
         """
         Try to get the next frame
         up to _MAX_FAILED_COUNT times in a row
@@ -184,6 +187,17 @@ class BaslerCamera(BaseCamera):
                     logger.error(error)
                     logger.warning(traceback.print_exc())
 
+    def _next_image(self):
+
+        image = self._next_image_raw()
+        if self._ROI is None:
+            return image
+        else:
+            r = self._ROI
+            return image[
+                int(r[1]) : int(r[1] + r[3]), int(r[0]) : int(r[0] + r[2])
+            ]
+
     # called by BaseCamera.__exit__()
     def close(self):
         self.stopped = True
@@ -220,7 +234,9 @@ class BaslerCamera(BaseCamera):
     @drive_basler
     def framerate(self):
         if self.is_open():
-            self._framerate = float(self.camera.AcquisitionFrameRate.GetValue())
+            self._framerate = float(
+                self.camera.AcquisitionFrameRate.GetValue()
+            )
         return self._framerate
 
     @framerate.setter
@@ -272,15 +288,10 @@ class BaslerCamera(BaseCamera):
 
 def get_parser(ap=None):
 
-
     if ap is None:
         ap = argparse.ArgumentParser()
 
-    ap.add_argument(
-        "--width",
-        type=int,
-        default=3840
-    )
+    ap.add_argument("--width", type=int, default=3840)
     ap.add_argument(
         "--height",
         type=int,
@@ -305,11 +316,7 @@ def get_parser(ap=None):
         default=25000,
         help="Exposure time in useconds (10^-6 s)",
     )
-    ap.add_argument(
-        "--preview",
-        action="store_true",
-        default=False
-    )
+    ap.add_argument("--preview", action="store_true", default=False)
     ap.add_argument(
         "--maxframes",
         type=int,
@@ -341,10 +348,15 @@ def get_dynamic_camera_kwargs(args):
 def setup(args=None):
 
     camera_kwargs = {
-        "framerate": getattr(args, "basler_framerate", getattr(args, "framerate")),
-        "exposure": getattr(args, "basler_exposure", getattr(args, "exposure")),
-        "width": args.width, "height": args.height,
-        "resolution_decrease": args.resolution_decrease
+        "framerate": getattr(
+            args, "basler_framerate", getattr(args, "framerate")
+        ),
+        "exposure": getattr(
+            args, "basler_exposure", getattr(args, "exposure")
+        ),
+        "width": args.width,
+        "height": args.height,
+        "resolution_decrease": args.resolution_decrease,
     }
     camera = BaslerCamera(**camera_kwargs)
     return camera
@@ -362,11 +374,21 @@ def run(camera, queue=None, preview=False):
 
     try:
         for timestamp, frame in camera:
-            print("Basler camera reads: ", timestamp, frame.shape, frame.dtype, camera.computed_framerate)
+            print(
+                "Basler camera reads: ",
+                timestamp,
+                frame.shape,
+                frame.dtype,
+                camera.computed_framerate,
+            )
             if queue is not None:
                 queue.put((timestamp, frame))
 
-            frame = cv2.resize(frame, (frame.shape[1]//3, frame.shape[0]//3), cv2.INTER_AREA)
+            frame = cv2.resize(
+                frame,
+                (frame.shape[1] // 3, frame.shape[0] // 3),
+                cv2.INTER_AREA,
+            )
             if preview:
                 cv2.imshow("Basler", frame)
                 if cv2.waitKey(1) == ord("q"):
@@ -396,6 +418,7 @@ def main(args=None, ap=None):
         args = ap.parse_args()
 
     setup_and_run(args)
+
 
 if __name__ == "__main__":
     main()

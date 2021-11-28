@@ -37,10 +37,16 @@ setup(
     #    "Programming Language :: Python :: 3",
     #    "Programming Language :: Python :: 3.7",
     # ],
-    scripts=['src/rsync_transfer.sh'],
+    scripts=["src/rsync_transfer.sh"],
     packages=find_packages(),
     # include_package_data=True,
-    install_requires=["gitpython", "opencv-python", "pyaml", "scikit-video", "imgstore"],
+    install_requires=[
+        "gitpython",
+        "opencv-python",
+        "pyaml",
+        "scikit-video",
+        "imgstore",
+    ],
     entry_points={
         "console_scripts": [
             "baslerpi=baslerpi.bin.run:main",

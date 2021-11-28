@@ -159,7 +159,8 @@ class ImgstoreMixin:
     """
     Teach a Recorder class how to use Imgstore to write a video
     """
-    _CHUNK_DURATION_SECONDS = 300 
+
+    _CHUNK_DURATION_SECONDS = 300
     _dtype = np.uint8
     # look here for possible formats:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
@@ -226,6 +227,7 @@ class ImgstoreMixin:
             ],  # reverse order so it becomes nrows x ncols i.e. height x width
             "imgdtype": self._dtype,
             "chunksize": self._chunksize,
+            "ROI": self._ROI,
         }
 
         kwargs.update(async_writer_kwargs)
@@ -246,7 +248,12 @@ class ImgstoreMixin:
         logger.info("  Chunksize: %s", self._chunksize)
 
         self._async_writer.start()
-        self._tqdm = tqdm.tqdm(position=self.idx, total=self._CACHE_SIZE, unit="", desc=f"{self.camera}" + r" % Buffer usage")
+        self._tqdm = tqdm.tqdm(
+            position=self.idx,
+            total=self._CACHE_SIZE,
+            unit="",
+            desc=f"{self.camera}" + r" % Buffer usage",
+        )
         self._last_cache_accumulated = 0
 
     def has_new_chunk(self):
@@ -284,7 +291,7 @@ class ImgstoreMixin:
 
     @property
     def usage(self):
-        return self._queue.qsize()# / self._CACHE_SIZE
+        return self._queue.qsize()  # / self._CACHE_SIZE
 
     def _info(self):
         # logger.info("Usage: {self.usage}%")

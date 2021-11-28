@@ -31,6 +31,7 @@ class QuerySensor:
         data = self.query()
         return data["humidity"]
 
+
 def setup(args):
     if args.sensor is None:
         sensor = None
