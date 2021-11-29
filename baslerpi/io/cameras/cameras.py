@@ -88,7 +88,6 @@ class BaseCamera:
         else:
             return self._rois
 
-    
     @staticmethod
     def _process_roi(r, fx, fy):
         r[0] = int(r[0] * fx)
@@ -139,6 +138,7 @@ class BaseCamera:
 
         else:
             logger.warning(f"{self} is not open")
+
     def time_stamp(self):
         if self._start_time is None:
             return 0
