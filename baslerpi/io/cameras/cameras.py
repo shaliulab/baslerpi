@@ -29,7 +29,7 @@ class BaseCamera:
         use_wall_clock=False,
         timeout=30000,
         resolution_decrease=None,
-        rois = None
+        rois=None,
     ):
         """
         The template class to generate and use video streams.
@@ -129,17 +129,19 @@ class BaseCamera:
                 fx = self.resolution[0] / 1280
                 fy = self.resolution[1] / 960
                 img = cv2.resize(img, (1280, 960), cv2.INTER_AREA)
-                rois = cv2.selectROIs("select the area", img)
+            rois = cv2.selectROIs("select the area", img)
 
-                rois = [self._process_roi(list(roi), fx, fy) for roi in rois]
-                self._rois = rois
-                print("Selected ROIs")
-                for roi in self._rois:
-                    print(roi)
-                cv2.destroyAllWindows()
+            rois = [self._process_roi(list(roi), fx, fy) for roi in rois]
+            self._rois = rois
+            print("Selected ROIs")
+            for roi in self._rois:
+                print(roi)
+            cv2.destroyAllWindows()
+            return rois
 
         else:
             logger.warning(f"{self} is not open")
+            return None
 
     def time_stamp(self):
         if self._start_time is None:
@@ -244,7 +246,7 @@ class BaseCamera:
             image = self._next_image_raw()
             if image is None:
                 return None
-            
+
             data = []
             for r in self.rois:
                 data.append(
@@ -259,7 +261,6 @@ class BaseCamera:
             return data
         except KeyboardInterrupt:
             return None
-
 
     def is_open(self):
         raise NotImplementedError
