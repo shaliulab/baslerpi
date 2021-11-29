@@ -133,6 +133,10 @@ class BaseCamera:
 
                 rois = [self._process_roi(list(roi), fx, fy) for roi in rois]
                 self._rois = rois
+                print("Selected ROIs")
+                for roi in self._rois:
+                    print(roi)
+                cv2.destroyAllWindows()
 
         else:
             logger.warning(f"{self} is not open")
