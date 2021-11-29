@@ -190,13 +190,13 @@ class ImgstoreRecorder(ImgstoreMixin, BaseRecorder):
         super().__init__(*args, **kwargs)
 
 
-class MultiImgstoreRecorer(ImgstoreRecorder):
+class MultiImgstoreRecorder(ImgstoreRecorder):
     def __init__(self, camera, *args, **kwargs):
         self._recorders = [
             ImgstoreRecorder(camera=camera, *args, **kwargs)
             for _ in camera.rois
         ]
-        super(MultiImgstoreRecorer, self).__init__(
+        super(MultiImgstoreRecorder, self).__init__(
             camera=camera, *args, **kwargs
         )
 
@@ -227,7 +227,7 @@ RECORDERS = {
     "FFMPEG": FFMPEGRecorder,
     "ImgStore": ImgstoreRecorder,
     "OpenCV": BaseRecorder,
-    "MultiImgStore": MultiImgstoreRecorer,
+    "MultiImgStore": MultiImgstoreRecorder,
 }
 
 
@@ -295,7 +295,7 @@ def get_parser(ap=None):
     ap.add_argument(
         "--recorder",
         choices=list(RECORDERS.keys()),
-        default="ImgStore",
+        default="MultiImgstoreRecorder",
     )
     ap.add_argument(
         "--verbose", choices=list(LEVELS.keys()), default="WARNING"
