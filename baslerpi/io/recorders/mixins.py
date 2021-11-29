@@ -226,7 +226,7 @@ class ImgstoreMixin:
             "imgshape": self.camera.rois[self.idx][4:2],
             "imgdtype": self._dtype,
             "chunksize": self._chunksize,
-            "ROI": self._camera._ROI,
+            "rois": self._camera.rois,
         }
 
         kwargs.update(async_writer_kwargs)
