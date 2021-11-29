@@ -345,7 +345,7 @@ def get_dynamic_camera_kwargs(args):
     return camera_kwargs
 
 
-def setup(args=None):
+def setup(args=None, **kwargs):
 
     camera_kwargs = {
         "framerate": getattr(
@@ -358,6 +358,7 @@ def setup(args=None):
         "height": args.height,
         "resolution_decrease": args.resolution_decrease,
     }
+    camera_kwargs.update(kwargs)
     camera = BaslerCamera(**camera_kwargs)
     return camera
 

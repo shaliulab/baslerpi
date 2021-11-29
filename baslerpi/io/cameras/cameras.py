@@ -29,6 +29,7 @@ class BaseCamera:
         use_wall_clock=False,
         timeout=30000,
         resolution_decrease=None,
+        rois = None
     ):
         """
         The template class to generate and use video streams.
@@ -79,7 +80,7 @@ class BaseCamera:
         self._last_tick = 0
         self.failed_count = 0
         self._resolution_decrease = resolution_decrease
-        self._rois = None
+        self._rois = rois
 
     @property
     def rois(self):
