@@ -218,12 +218,13 @@ class ImgstoreMixin:
         self._path = path
         self._chunksize = self._CHUNK_DURATION_SECONDS * self._framerate
 
+    
         async_writer_kwargs = {
             "framerate": self._framerate,
             "mode": "w",
             "basedir": self._path,
             # reverse order so it becomes nrows x ncols i.e. height x width
-            "imgshape": self.camera.rois[self.idx][3:1:-1],
+            "imgshape": self.imgshape,
             "imgdtype": self._dtype,
             "chunksize": self._chunksize,
             "rois": self._camera.rois,
@@ -322,4 +323,4 @@ class ImgstoreMixin:
         logger.info("Quiting recorder...")
         self._stop_queue.put("STOP")
         # self._video_writer.close()
-        self.camera.close()
+        self.close_source()

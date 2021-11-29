@@ -1,80 +1,81 @@
-import argparse
-import datetime
 import logging
-import os.path
-import sys
-from .base import *
+import time
 
 logger = logging.getLogger(__name__)
-import cv2
-import numpy as np
+import multiprocessing
+import threading
 
-from baslerpi.io.cameras import BaslerCamera
-from baslerpi.io.recorders import Recorder
-from baslerpi.processing.compressor import Compressor
+from baslerpi.io.recorders import ImgstoreRecorder
+from baslerpi.utils import document_for_reproducibility
+from baslerpi.io.cameras.basler_camera import setup as setup_camera
 
-ap = argparse.ArgumentParser()
+CAMERAS = {"Basler": setup_camera}
 
-ap.add_argument(
-    "--output-dir",
-    type=str,
-    default="/1TB/Cloud/Lab/Projects/FlyBowl/videos",
-)
-ap.add_argument("--duration", type=int, help="(s)")
-ap.add_argument("--encoder", type=str)
-ap.add_argument("--crf", type=int)
-ap.add_argument("--compress", dest="compress", action="store_true")
+class Monitor(threading.Thread):
+    _RecorderClass = ImgstoreRecorder
 
-args = vars(ap.parse_args())
+    def __init__(self, camera_name, args, *args, **kwargs):
 
-output_dir = args["output_dir"]
-crf = args["crf"]
-encoder = args["encoder"]
-duration = args["duration"]
-compress = args["compress"]
+        queue_size = self._RecorderClass._CACHE_SIZE
+        self.setup_camera(camera_name, args)
+        self._queues = [multiprocessing.Queue(maxsize=queue_size) for _ in self.camera.rois]
 
-recorder_kwargs = {
-    k: args[k]
-    for k in args.keys()
-    if k in ["duration", "encoder", "crf"] and args[k] is not None
-}
-print(recorder_kwargs)
-
-filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-print(filename)
+        self._recorders = [
+            self._RecorderClass(
+                *args,
+                source=self._queues[i],
+                resolution=self.camera.rois[i][2:4],
+                **kwargs
+            )
+            for i in self.camera.rois
+        ]
 
 
-camera = BaslerCamera(framerate=30)
-camera.open()
+    def setup_camera(self, camera_name, args):
+        self._camera_name = camera_name
+        camera = CAMERAS[camera_name](args)
+        camera.open()
+        if self.select_roi:
+            camera.select_ROI()
 
-if compress:
-    compressor = Compressor(ntargets=3, shape=camera.shape)
-else:
-    compressor = None
-recorder = Recorder(camera, compressor=compressor, **recorder_kwargs)
-
-
-answer = input("Add now any metadata that needs to be entered manually: ")
-
-metadata = {
-    "exposure-time": camera.exposuretime,
-    "notes": answer,
-    "python-version": sys.version,
-    "baslerpi-version": baslerpi.__version__,
-    "imgstore-version": imgstore.__version__,  # for imgstore writer
-    "skvideo-version": skvideo.__version__,  # for ffmpeg writer
-    "cv2-version": cv2.__version__,
-}
+        self.camera = camera
+        return camera
 
 
-recorder.open(filename=os.path.join(output_dir, f"{filename}.avi"), **metadata)
+    def open(self, path, **kwargs):
+        for idx in range(len(self.camera.rois)):
+            if path[-1] == "/":
+                path = path[:-1]
 
-try:
-    recorder.start()
-    recorder.join()
-except KeyboardInterrupt:
-    recorder._stop_event.set()
-    logger.info("Quitting...")
+            recorder_path = path + f"_ROI_{idx}"
+            self._recorders[idx].open(path=recorder_path, **kwargs)
 
-recorder.close()
-camera.close()
+    def run(self):
+
+        self._start_time = time.time()
+        for recorder in self._recorders:
+            recorder._start_time = self._start_time
+
+        for timestamp, frame in self.camera:
+            for i in range(len(self.camera.rois)):
+                self._recorders[i].source.put((timestamp, frame[i]))
+
+
+    def close(self):
+        for recorder in self._recorders:
+            recorder.close()
+
+
+def run(monitor, **kwargs):
+
+    kwargs.update(document_for_reproducibility(monitor))
+    # print("Opening recorder")
+    monitor.open(**kwargs)
+    # print("Starting recorder")
+
+    try:
+        monitor.start()
+        monitor.join()
+    except KeyboardInterrupt:
+        pass
+    monitor.close()

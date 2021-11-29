@@ -7,16 +7,15 @@ import math
 import os.path
 import json
 
-from baslerpi.io.cameras.basler_camera import setup as setup_camera
 from baslerpi.io.cameras.basler_camera import (
     get_parser as camera_parser,
 )
 from baslerpi.io.recorders.record import setup as setup_recorder
 from baslerpi.io.recorders.record import RECORDERS
 from baslerpi.io.recorders.record import get_parser as recorder_parser
-from baslerpi.io.recorders.record import run as run_recorder
+from baslerpi.core.monitor import run as run_monitor
 from baslerpi.web_utils.sensor import setup as setup_sensor
-
+from baslerpi.core import Monitor
 
 LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
 logger = logging.getLogger(__name__)
@@ -44,20 +43,16 @@ def setup(args):
     setup_logger(level=level)
     config = load_config(args)
     sensor = setup_sensor(args)
-    camera = setup_camera(args)
-    camera.open()
-    if args.select_roi:
-        camera.select_ROI()
-
-    recorder = setup_recorder(args, camera, sensor)
-    return config, recorder
+    # recorder = setup_recorder(args, camera, sensor)
+    monitor = Monitor(args.camera, sensor=sensor)
+    return config, monitor
 
 
 def setup_and_run(args, **kwargs):
 
-    config, recorder = setup(args)
+    config, monitor = setup(args)
     output = os.path.join(config["videos"]["folder"], args.output)
-    run_recorder(recorder, fmt=args.fmt, path=output, **kwargs)
+    run_monitor(monitor, fmt=args.fmt, path=output, **kwargs)
 
 
 def main(args=None, ap=None):

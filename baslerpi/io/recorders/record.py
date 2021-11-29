@@ -1,13 +1,10 @@
 import argparse
 import datetime
 import math
+import multiprocessing
 import threading
 import time
 import logging
-
-import cv2
-
-from baslerpi.utils import document_for_reproducibility
 
 from baslerpi.io.recorders.mixins import (
     FFMPEGMixin,
@@ -18,9 +15,9 @@ logger = logging.getLogger("baslerpi.io.record")
 LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
 
 
-class BaseRecorder(threading.Thread):
+class BaseRecorder(multiprocessing.Process):
     """
-    Take an iterable camera object which returns (timestamp, frame)
+    Take an iterable source object which returns (timestamp, frame)
     in every iteration and save to a path determined in the open() method
     """
 
@@ -29,11 +26,12 @@ class BaseRecorder(threading.Thread):
 
     def __init__(
         self,
-        camera,
+        source,
         *args,
         sensor=None,
         compressor=None,
         framerate=None,
+        resolution=None,
         duration=math.inf,
         maxframes=math.inf,
         verbose=False,
@@ -44,15 +42,14 @@ class BaseRecorder(threading.Thread):
         **kwargs,
     ):
         """
-        Initialize a recorder with framerate equal to FPS of camera
+        Initialize a recorder with framerate equal to FPS of source
         or alternatively provide a custom framerate
         """
 
-        self._camera = camera
-        if framerate is None:
-            framerate = camera._framerate
-        self._framerate = framerate
+        self._source = source
+
         self._framecount = 0
+        self._framerate = framerate
         self._duration = duration
 
         self._video_writer = None
@@ -68,18 +65,56 @@ class BaseRecorder(threading.Thread):
         self._crf = crf
         self._preview = preview
         self.idx = idx
+        self._resolution = resolution
 
         self.last_tick = 0
+        
         super().__init__(*args, **kwargs)
 
+    
     @property
-    def camera(self):
-        return self._camera
+    def source(self):
+        return self._source
+
+    
+    @property
+    def framerate(self):
+        if isinstance(self.source, multiprocessing.Queue):
+            framerate = self._framerate
+        else:
+            framerate = self.source.framerate
+
+        self._framerate = framerate
+        return framerate
+    
+    
+    @property
+    def imgshape(self):
+        if isinstance(self.source, multiprocessing.Queue):
+            imgshape = self.resolution[3:1-1]
+        else:
+            data = self.source.get()
+            if len(data) == 1 and data == "STOP":
+                self.close()
+            else:
+                timestamp, frame = data
+                imgshape = frame.shape
+
+        
+        self._imgshape = imgshape
+        return imgshape
+
 
     @property
     def resolution(self):
         """Resolution in widthxheight pixels"""
-        return self._camera.resolution
+        if isinstance(self.source, multiprocessing.Queue):
+            resolution = self._resolution
+        else:
+            resolution = self.source.resolution
+        
+        self._resolution = resolution
+        return resolution
 
     def write(self, frame, framecount, timestamp):
         """
@@ -98,42 +133,71 @@ class BaseRecorder(threading.Thread):
         self._framecount += 1
 
     def __str__(self):
-        return f"Recorder {self.idx} on {self.camera.__str__()}"
+        return f"Recorder {self.idx} on {self.source}"
 
-    def run_preview(self, frame):
+    # def run_preview(self, frame):
 
-        if self._preview:
-            cv2.imshow(f"Feed from {self.__str__()}", frame)
-            if cv2.waitKey(1) == ord("q"):
-                return "quit"
-            else:
-                return
+    #     if self._preview:
+    #         cv2.imshow(f"Feed from {self}", frame)
+    #         if cv2.waitKey(1) == ord("q"):
+    #             return "quit"
+    #         else:
+    #             return
 
     def run(self):
         """
-        Collect frames from the camera and write them to the video
+        Collect frames from the source and write them to the video
         Periodically log #frames saved
         """
 
         self._start_time = time.time()
 
-        for timestamp, frame in self.camera:
-            answer = self._run(timestamp, frame)
+        if isinstance(self.source, multiprocessing.Queue):
+            self.run_queue(self.source)
+        else:
+            self.run_camera(self.source)
 
-            if answer == "quit":
+    def run_queue(self, queue):
+
+        while not queue.empty():
+            
+            data = queue.get()
+            if len(data) == 1 and data == "STOP":
                 break
+            else:
+                timestamp, frame = data
+                status = self._run(timestamp, frame)
+                if status == "STOP":
+                    break
+
+
+    def run_camera(self, camera):
+
+        for timestamp, frame in camera:
+            status = self._run(timestamp, frame)
+            if status == "STOP":
+                    break
+
 
     def _run(self, timestamp, frame):
 
         if self.should_stop:
-            return "quit"
+            return "STOP"
 
-        answer = self.run_preview(frame)
+        # answer = self.run_preview(frame)
 
         self.save_extra_data(timestamp)
         self.writeFrame(frame, timestamp)
         self.report_info()
-        return answer
+        # return answer
+
+
+    def close_source(self):
+        if isinstance(self.source, multiprocessing.Queue):
+            self.source.put("STOP")
+        else:
+            self.source.close()
+
 
     @property
     def should_stop(self):
@@ -152,22 +216,6 @@ class BaseRecorder(threading.Thread):
     @property
     def max_frames_reached(self):
         return self._framecount >= self._maxframes
-
-    def build_pipeline(self, *args):
-        messg = "Defined pipeline:\n"
-        for cls in args:
-            self._pipeline.append(cls())
-            messg += "%s\n" % cls.__name__
-
-        print(messg)
-
-    def pipeline(self, frame):
-        if len(self._pipeline) == 0:
-            return frame
-        else:
-            for step in self._pipeline:
-                frame = step.apply(frame)
-        return frame
 
 
 class FFMPEGRecorder(FFMPEGMixin, BaseRecorder):
@@ -190,54 +238,21 @@ class ImgstoreRecorder(ImgstoreMixin, BaseRecorder):
         super().__init__(*args, **kwargs)
 
 
-class MultiImgstoreRecorder(ImgstoreRecorder):
-    def __init__(self, camera, *args, **kwargs):
-        self._recorders = [
-            ImgstoreRecorder(camera=camera, *args, **kwargs)
-            for _ in camera.rois
-        ]
-        super(MultiImgstoreRecorder, self).__init__(
-            camera=camera, *args, **kwargs
-        )
-
-    def open(self, path, **kwargs):
-        for idx in range(len(self.camera.rois)):
-            if path[-1] == "/":
-                path = path[:-1]
-
-            recorder_path = path + f"_ROI_{idx}"
-            self._recorders[idx].open(path=recorder_path, **kwargs)
-
-    def run(self):
-
-        self._start_time = time.time()
-        for recorder in self._recorders:
-            recorder._start_time = self._start_time
-
-        for timestamp, frame in self.camera:
-            for i in range(len(self.camera.rois)):
-                self._recorders[i]._run(timestamp, frame[i])
-
-    def close(self):
-        for recorder in self._recorders:
-            recorder.close()
-
 
 RECORDERS = {
     "FFMPEG": FFMPEGRecorder,
     "ImgStore": ImgstoreRecorder,
-    "OpenCV": BaseRecorder,
-    "MultiImgStore": MultiImgstoreRecorder,
+    "OpenCV": BaseRecorder
 }
 
 
-def setup(args, camera, sensor, idx=0):
+def setup(args, source, sensor, idx=0):
 
     RecorderClass = RECORDERS[args.recorder]
 
     recorder = RecorderClass(
-        camera,
-        framerate=int(camera.framerate),
+        source,
+        framerate=int(source.framerate),
         duration=args.duration,
         maxframes=args.maxframes,
         sensor=sensor,
@@ -249,21 +264,6 @@ def setup(args, camera, sensor, idx=0):
     )
 
     return recorder
-
-
-def run(recorder, **kwargs):
-
-    kwargs.update(document_for_reproducibility(recorder))
-    # print("Opening recorder")
-    recorder.open(**kwargs)
-    # print("Starting recorder")
-
-    try:
-        recorder.start()
-        recorder.join()
-    except KeyboardInterrupt:
-        pass
-    recorder.close()
 
 
 def get_parser(ap=None):
