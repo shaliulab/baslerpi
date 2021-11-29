@@ -223,7 +223,7 @@ class ImgstoreMixin:
             "mode": "w",
             "basedir": self._path,
             # reverse order so it becomes nrows x ncols i.e. height x width
-            "imgshape": self.camera.rois[self.idx][4:2],
+            "imgshape": self.camera.rois[self.idx][3:1:-1],
             "imgdtype": self._dtype,
             "chunksize": self._chunksize,
             "rois": self._camera.rois,
