@@ -79,16 +79,40 @@ class BaseCamera:
         self._last_tick = 0
         self.failed_count = 0
         self._resolution_decrease = resolution_decrease
-        self._ROI = None
+        self._rois = None
+
+    @property
+    def rois(self):
+        if self._rois is None:
+            return [(0, 0, *self.resolution)]
+        else:
+            return self._rois
 
     def select_ROI(self):
+        """
+        Select only one ROI
+        """
 
         if self.is_open():
 
             img = self._next_image()
-            self._ROI = cv2.selectROI("select the area", img)
+            if self.resolution[0] > 1280 or self.resolution[1] > 960:
+                fx = self.resolution[0] / 1280
+                fy = self.resolution[1] / 960
+                img = cv2.resize(img, (1280, 960), cv2.INTER_AREA)
+                r = list(cv2.selectROI("select the area", img))
+                r[0] = int(r[0] * fx)
+                r[1] = int(r[1] * fy)
+                r[2] = int(r[2] * fx)
+                r[3] = int(r[3] * fy)
+                print(r)
+                self._rois = [tuple(r)]
+
         else:
             logger.warning(f"{self} is not open")
+
+    def select_ROIs(self):
+        pass
 
     def time_stamp(self):
         if self._start_time is None:
@@ -101,7 +125,9 @@ class BaseCamera:
 
         return self._time_s
 
-    def __exit__(self):  # pylint: disable=unexpected-special-method-signature
+    def __exit__(
+        self,
+    ):  # pylint: disable=unexpected-special-method-signature
         logger.info("Closing camera")
         self.close()
 

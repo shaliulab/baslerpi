@@ -117,7 +117,10 @@ class BaseRecorder(threading.Thread):
 
             self.save_extra_data(timestamp)
             self.writeFrame(frame, timestamp)
-            if self._framecount % (self.INFO_FREQ) == 0 and self._verbose:
+            if (
+                self._framecount % (self.INFO_FREQ) == 0
+                and self._verbose
+            ):
                 self._info()
 
     @property
@@ -244,7 +247,9 @@ def get_parser(ap=None):
     ap.add_argument("--fmt", type=str, default="mjpeg/avi")
     ap.add_argument("--crf", type=int)
     ap.add_argument(
-        "--recorder", choices=list(RECORDERS.keys()), default="ImgStore"
+        "--recorder",
+        choices=list(RECORDERS.keys()),
+        default="ImgStore",
     )
     ap.add_argument(
         "--verbose", choices=list(LEVELS.keys()), default="WARNING"

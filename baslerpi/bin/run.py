@@ -8,7 +8,9 @@ import os.path
 import json
 
 from baslerpi.io.cameras.basler_camera import setup as setup_camera
-from baslerpi.io.cameras.basler_camera import get_parser as camera_parser
+from baslerpi.io.cameras.basler_camera import (
+    get_parser as camera_parser,
+)
 from baslerpi.io.recorders.record import setup as setup_recorder
 from baslerpi.io.recorders.record import RECORDERS
 from baslerpi.io.recorders.record import get_parser as recorder_parser
@@ -44,6 +46,9 @@ def setup(args):
     sensor = setup_sensor(args)
     camera = setup_camera(args)
     camera.open()
+    if args.select_roi:
+        camera.select_ROI()
+
     recorder = setup_recorder(args, camera, sensor)
     return config, recorder
 

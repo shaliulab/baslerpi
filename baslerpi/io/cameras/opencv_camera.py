@@ -18,7 +18,12 @@ logger.addHandler(console)
 
 class OpenCVCamera(BaseCamera):
     def __init__(
-        self, *args, video_path=None, wrap=False, greyworld=True, **kwargs
+        self,
+        *args,
+        video_path=None,
+        wrap=False,
+        greyworld=True,
+        **kwargs
     ):
 
         self._wrap = wrap
@@ -43,7 +48,9 @@ class OpenCVCamera(BaseCamera):
             now = time.time()
             self._time_s = now - self._start_time
         else:
-            self._time_s = self.camera.get(cv2.CAP_PROP_POS_MSEC) / 1000
+            self._time_s = (
+                self.camera.get(cv2.CAP_PROP_POS_MSEC) / 1000
+            )
 
         # add wrap_s if it's running in wrap mode
         # wrap_s will be n x the number of seconds of the video
@@ -104,7 +111,10 @@ class OpenCVCamera(BaseCamera):
     @resolution.getter
     def resolution(self):
         # TODO Is int needed here?
-        self._resolution = (int(self.camera.get(3)), int(self.camera.get(4)))
+        self._resolution = (
+            int(self.camera.get(3)),
+            int(self.camera.get(4)),
+        )
         return self._resolution
 
     @resolution.setter

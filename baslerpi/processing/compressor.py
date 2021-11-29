@@ -24,7 +24,9 @@ class OpenCVCompressor:
     _boxSide = 700
     _minContour_area = 500
 
-    def __init__(self, ntargets, shape, frequency=2, algo="MOG2", debug=False):
+    def __init__(
+        self, ntargets, shape, frequency=2, algo="MOG2", debug=False
+    ):
         self._debug = debug
         self._ntargets = ntargets
         self._frequency = frequency
@@ -79,7 +81,9 @@ class OpenCVCompressor:
         """
         frame = cv2.medianBlur(frame, self._blur_kernel)
         frame = cv2.erode(
-            frame, self._erode_kernel, iterations=self._erode_iterations
+            frame,
+            self._erode_kernel,
+            iterations=self._erode_iterations,
         )
 
         segmented = self._backSub.apply(frame)
@@ -93,13 +97,20 @@ class OpenCVCompressor:
         )
         mask = cv2.erode(mask, self._erode_kernel, iterations=3)
         cts, _ = cv2.findContours(
-            mask, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE
+            mask,
+            mode=cv2.RETR_EXTERNAL,
+            method=cv2.CHAIN_APPROX_SIMPLE,
         )
-        cts = [ct for ct in cts if cv2.contourArea(ct) > self._minContour_area]
+        cts = [
+            ct
+            for ct in cts
+            if cv2.contourArea(ct) > self._minContour_area
+        ]
 
         moms = [cv2.moments(ct) for ct in cts]
         positions = [
-            (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"])) for M in moms
+            (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+            for M in moms
         ]
 
         if len(positions) != self._ntargets:
@@ -114,7 +125,11 @@ class OpenCVCompressor:
                 [
                     mask,
                     cv2.drawContours(
-                        np.zeros(frame.shape, dtype=np.uint8), cts, -1, 255, -1
+                        np.zeros(frame.shape, dtype=np.uint8),
+                        cts,
+                        -1,
+                        255,
+                        -1,
                     ),
                 ]
             )
@@ -147,7 +162,9 @@ class OpenCVCompressor:
             positions = self._find(frame)
 
         # rectangles = [cv2.boundingRect(ct) for ct in cts]
-        rectangles = [self._rectfrompt(pt) for pt in self._last_positions]
+        rectangles = [
+            self._rectfrompt(pt) for pt in self._last_positions
+        ]
         # assert len(rectangles) < self._ntargets*2
 
         for j, rect in enumerate(rectangles):
@@ -172,7 +189,8 @@ class OpenCVCompressor:
         if self._debug:
 
             if (
-                (self._framecount % self._frequency) == 0 or self.warmup
+                (self._framecount % self._frequency) == 0
+                or self.warmup
             ) and self._debug:
                 compressed_frame = cv2.putText(
                     compressed_frame,
@@ -209,7 +227,11 @@ class OpenCVCompressor:
 
             debugging_image = cv2.resize(
                 debugging_image,
-                tuple((np.array(debugging_image.shape)[::-1] // 5).tolist()),
+                tuple(
+                    (
+                        np.array(debugging_image.shape)[::-1] // 5
+                    ).tolist()
+                ),
                 interpolation=cv2.INTER_AREA,
             )
 
@@ -249,7 +271,9 @@ if __name__ == "__main__":
         default=300000,
         help="Camera fetches frames for this ms",
     )
-    ap.add_argument("-D", "--debug", dest="debug", action="store_true")
+    ap.add_argument(
+        "-D", "--debug", dest="debug", action="store_true"
+    )
 
     args = ap.parse_args()
     frequency = args.frequency
@@ -272,7 +296,10 @@ if __name__ == "__main__":
         break
 
     compressor = OpenCVCompressor(
-        ntargets=3, frequency=frequency, shape=frame.shape, debug=args.debug
+        ntargets=3,
+        frequency=frequency,
+        shape=frame.shape,
+        debug=args.debug,
     )
     # recorder = FFMPEGRecorder(camera, compressor=compressor)
     recorder = ImgstoreRecorder(camera, compressor=compressor)

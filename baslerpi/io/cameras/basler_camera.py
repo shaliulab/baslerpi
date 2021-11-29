@@ -113,7 +113,8 @@ class BaslerCamera(BaseCamera):
 
             # Print the model name of the camera.
             logger.info(
-                "Using device %s", self.camera.GetDeviceInfo().GetModelName()
+                "Using device %s",
+                self.camera.GetDeviceInfo().GetModelName(),
             )
 
             self.camera.MaxNumBuffer = buffersize
@@ -126,7 +127,9 @@ class BaslerCamera(BaseCamera):
                     maxframes
                 )  # if we want to limit the number of frames
             else:
-                self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
+                self.camera.StartGrabbing(
+                    pylon.GrabStrategy_LatestImageOnly
+                )
 
             status, img = self.grab()
 
@@ -195,7 +198,8 @@ class BaslerCamera(BaseCamera):
         else:
             r = self._ROI
             return image[
-                int(r[1]) : int(r[1] + r[3]), int(r[0]) : int(r[0] + r[2])
+                int(r[1]) : int(r[1] + r[3]),
+                int(r[0]) : int(r[0] + r[2]),
             ]
 
     # called by BaseCamera.__exit__()
@@ -224,7 +228,11 @@ class BaslerCamera(BaseCamera):
         Shape = (number_vertical_pixels, number_horizontal_pixels, number_channels)
         """
         # TODO Return number of channels!
-        return (self.camera.Height.GetValue(), self.camera.Width.GetValue(), 1)
+        return (
+            self.camera.Height.GetValue(),
+            self.camera.Width.GetValue(),
+            1,
+        )
 
     @property
     def framerate(self):
@@ -268,7 +276,9 @@ class BaslerCamera(BaseCamera):
     @exposuretime.getter
     @drive_basler
     def exposuretime(self):
-        self._exposuretime = float(self.camera.ExposureTime.GetValue())
+        self._exposuretime = float(
+            self.camera.ExposureTime.GetValue()
+        )
         return self._exposuretime
 
     @exposuretime.setter
@@ -277,8 +287,12 @@ class BaslerCamera(BaseCamera):
         try:
             if not exposuretime is None:
                 self.camera.ExposureTime.SetValue(exposuretime)
-                logger.info("Setting exposure time to %3.f", exposuretime)
-            self._exposuretime = float(self.camera.ExposureTime.GetValue())
+                logger.info(
+                    "Setting exposure time to %3.f", exposuretime
+                )
+            self._exposuretime = float(
+                self.camera.ExposureTime.GetValue()
+            )
 
         except Exception as error:
             logger.warning(error)
@@ -326,6 +340,12 @@ def get_parser(ap=None):
     ap.add_argument(
         "--verbose", choices=list(LEVELS.keys()), default="WARNING"
     )
+    ap.add_argument(
+        "--select-roi",
+        default=False,
+        dest="select_roi",
+        action="store_true",
+    )
     return ap
 
 
@@ -341,7 +361,9 @@ def get_dynamic_camera_kwargs(args):
     for cls in BaslerCamera.__bases__:
         keys = keys + list(inspect.signature(cls).parameters.keys())
 
-    camera_kwargs = {k: getattr(args, k) for k in vars(args) if k in keys}
+    camera_kwargs = {
+        k: getattr(args, k) for k in vars(args) if k in keys
+    }
     return camera_kwargs
 
 
@@ -405,6 +427,8 @@ def setup_and_run(args, **kwargs):
     camera = setup(args)
     maxframes = getattr(args, "maxframes", None)
     camera.open(maxframes=maxframes)
+    if args.select_roi:
+        camera.select_ROIs()
     run(camera, preview=args.preview, **kwargs)
 
 

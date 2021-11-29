@@ -30,7 +30,9 @@ class TCPClient(threading.Thread):
         self._queue.put(frame)
 
     def stream(self, frame):
-        result, imgencode = cv2.imencode(".jpg", frame, self._encode_param)
+        result, imgencode = cv2.imencode(
+            ".jpg", frame, self._encode_param
+        )
         # data = np.array(imgencode)
         data = imgencode
         stringData = data.tostring()
@@ -106,7 +108,9 @@ class FastTCPClient(TCPClient):
         bef = time.time()
         result, imgencode = cv2.imencode(".jpg", frame, *args)
         aft = time.time()
-        encoding_logger.debug(f"Elapsed time encoding frame: {aft-bef}")
+        encoding_logger.debug(
+            f"Elapsed time encoding frame: {aft-bef}"
+        )
         data = np.array(imgencode)
         stringData = data.tostring()
         return stringData
@@ -132,18 +136,24 @@ class FastTCPClient(TCPClient):
                 print(time.time())
                 print(f"Encoding frame at {time.time() - now}")
                 encoded_frame = encode(frame, *args)
-                networking_logger.debug(f"{current_process}: Streaming frame")
+                networking_logger.debug(
+                    f"{current_process}: Streaming frame"
+                )
                 print(f"Streaming frame at {time.time() - now}")
                 try:
                     stream(ip, port, encoded_frame, chunk_size)
                 except Exception as error:
                     print(error)
-                    print("Some problem happened during streaming. See error")
+                    print(
+                        "Some problem happened during streaming. See error"
+                    )
                 print(f"Done at {time.time() - now}")
                 count += 1
                 if (t_ms - last_tick) > 1000:
                     last_tick = t_ms
-                    logger.info(f"{current_process} framerate: {count}")
+                    logger.info(
+                        f"{current_process} framerate: {count}"
+                    )
                     count = 0
                 # out_q.put(encoded_frame)
 

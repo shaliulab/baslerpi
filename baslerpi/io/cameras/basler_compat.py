@@ -81,7 +81,8 @@ class BaslerCameraDLC(BaslerCamera, DLCCamera):
         frame = self._next_image()
         if self.crop is not None:
             frame = frame[
-                self.crop[2] : self.crop[3], self.crop[0] : self.crop[1]
+                self.crop[2] : self.crop[3],
+                self.crop[0] : self.crop[1],
             ]
 
         if len(frame.shape) == 2 or frame.shape[2] == 1:

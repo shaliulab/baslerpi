@@ -102,8 +102,12 @@ class FPSAnnotator(TextStep):
 
     @property
     def computed_fps(self):
-        if (time.time() - self._last_timestamp) > self._INTERVAL_SECONDS:
-            self._computed_fps = self._lastcount / self._INTERVAL_SECONDS
+        if (
+            time.time() - self._last_timestamp
+        ) > self._INTERVAL_SECONDS:
+            self._computed_fps = (
+                self._lastcount / self._INTERVAL_SECONDS
+            )
             self._last_timestamp = time.time()
             self._lastcount = 0
         else:

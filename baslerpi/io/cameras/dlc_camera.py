@@ -71,7 +71,9 @@ class Camera(object):
         self.set_im_size(resolution)
         self.fps = fps
         self.use_tk_display = use_tk_display
-        self.display_resize = display_resize if display_resize else 1.0
+        self.display_resize = (
+            display_resize if display_resize else 1.0
+        )
         self.next_frame = 0
 
     def set_im_size(self, res):
@@ -94,7 +96,10 @@ class Camera(object):
         self.im_size = (
             (int(res[0]), int(res[1]))
             if self.crop is None
-            else (self.crop[3] - self.crop[2], self.crop[1] - self.crop[0])
+            else (
+                self.crop[3] - self.crop[2],
+                self.crop[1] - self.crop[0],
+            )
         )
 
     def set_capture_device(self):
@@ -120,7 +125,8 @@ class Camera(object):
                 frame = self.get_image()
                 timestamp = cur_time
                 self.next_frame = max(
-                    self.next_frame + 1.0 / self.fps, cur_time + 0.5 / self.fps
+                    self.next_frame + 1.0 / self.fps,
+                    cur_time + 0.5 / self.fps,
                 )
 
         return frame, timestamp

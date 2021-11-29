@@ -16,7 +16,9 @@ from baslerpi.processing.compressor import Compressor
 ap = argparse.ArgumentParser()
 
 ap.add_argument(
-    "--output-dir", type=str, default="/1TB/Cloud/Lab/Projects/FlyBowl/videos"
+    "--output-dir",
+    type=str,
+    default="/1TB/Cloud/Lab/Projects/FlyBowl/videos",
 )
 ap.add_argument("--duration", type=int, help="(s)")
 ap.add_argument("--encoder", type=str)
@@ -52,7 +54,9 @@ else:
 recorder = Recorder(camera, compressor=compressor, **recorder_kwargs)
 
 
-answer = input("Add now any metadata that needs to be entered manually: ")
+answer = input(
+    "Add now any metadata that needs to be entered manually: "
+)
 
 metadata = {
     "exposure-time": camera.exposuretime,
@@ -65,7 +69,9 @@ metadata = {
 }
 
 
-recorder.open(filename=os.path.join(output_dir, f"{filename}.avi"), **metadata)
+recorder.open(
+    filename=os.path.join(output_dir, f"{filename}.avi"), **metadata
+)
 
 try:
     recorder.start()
