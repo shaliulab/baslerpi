@@ -34,9 +34,7 @@ class FFMPEGMixin:
         kwargs["filename"] = kwargs.pop("path")
 
         # Report information to user
-        logger.info(
-            "Initializing FFMPEG video with following properties:"
-        )
+        logger.info("Initializing FFMPEG video with following properties:")
         logger.info("  Framerate: %d", self._framerate)
         logger.info("  Resolution: %dx%d", *self.resolution)
         logger.info("  Path: %s", self._path)
@@ -54,9 +52,7 @@ class FFMPEGMixin:
             fmt = kwargs.pop("fmt")
             kwargs["outputdict"]["-c:v"] = FMT_TO_CODEC[fmt]
 
-        self._video_writer = skvideo.io.FFmpegWriter(
-            **kwargs, verbosity=1
-        )
+        self._video_writer = skvideo.io.FFmpegWriter(**kwargs, verbosity=1)
 
     def write(self, frame, i, timestamp):
         frame = self.pipeline(frame)
@@ -86,9 +82,7 @@ class OpenCVMixin:
         self._maxframes = maxframes
 
         # Report information to user
-        logger.info(
-            "Initializing OpenCV video with following properties:"
-        )
+        logger.info("Initializing OpenCV video with following properties:")
         logger.info("  Framerate: %d", self._framerate)
         logger.info("  Resolution: %dx%d", *self.resolution)
         logger.info("  Path: %s", self._path)
@@ -113,9 +107,7 @@ class OpenCVMixin:
 
     def write(self, frame, i, timestamp):
         frame = self.pipeline(frame)
-        cv2.imwrite(
-            frame, os.path.join(self._path, f"{str(i).zfill(10)}.png")
-        )
+        cv2.imwrite(frame, os.path.join(self._path, f"{str(i).zfill(10)}.png"))
 
     def close(self):
         """
@@ -137,9 +129,7 @@ class AsyncWriter(threading.Thread):
         # keys = list(inspect.signature(imgstore.new_for_format).parameters.keys())
         # imgstore_kwargs = {k: kwargs.pop(k) for k in keys if k in kwargs}
         # print(imgstore_kwargs)
-        self._video_writer = imgstore.new_for_format(
-            fmt=fmt, **kwargs
-        )
+        self._video_writer = imgstore.new_for_format(fmt=fmt, **kwargs)
         self._framecount = 0
         super().__init__(*args)
 
@@ -157,9 +147,7 @@ class AsyncWriter(threading.Thread):
             logger.info("CMD STOP received. Stopping recording!")
             self._close()
         else:
-            logger.warning(
-                f"CMD {cmd} not understood. Treating as STOP"
-            )
+            logger.warning(f"CMD {cmd} not understood. Treating as STOP")
             # TODO implement response to other commands if needed here
             self._close()
 
@@ -228,17 +216,14 @@ class ImgstoreMixin:
     def open(self, path, **kwargs):
 
         self._path = path
-        self._chunksize = (
-            self._CHUNK_DURATION_SECONDS * self._framerate
-        )
+        self._chunksize = self._CHUNK_DURATION_SECONDS * self._framerate
 
         async_writer_kwargs = {
             "framerate": self._framerate,
             "mode": "w",
             "basedir": self._path,
-            "imgshape": self.resolution[
-                ::-1
-            ],  # reverse order so it becomes nrows x ncols i.e. height x width
+            # reverse order so it becomes nrows x ncols i.e. height x width
+            "imgshape": self.camera.rois[self.idx][4:2],
             "imgdtype": self._dtype,
             "chunksize": self._chunksize,
             "ROI": self._camera._ROI,
@@ -255,9 +240,7 @@ class ImgstoreMixin:
         )
 
         # Report information to user
-        logger.info(
-            "Initializing Imgstore video with following properties:"
-        )
+        logger.info("Initializing Imgstore video with following properties:")
         logger.info("  Resolution: %dx%d", *self.resolution)
         logger.info("  Path: %s", self._path)
         logger.info("  Format (codec): %s", self._async_writer._fmt)
@@ -290,9 +273,7 @@ class ImgstoreMixin:
             # which actually is every use case
             files = os.listdir(self._path)
             extension = "." + self._fmt.split("/")[1]
-            videos = [
-                f for f in files if f[::-1][:4][::-1] == extension
-            ]
+            videos = [f for f in files if f[::-1][:4][::-1] == extension]
             last_video = sorted(videos)[-1]
             last_video_without_extension = last_video.strip(extension)
             last_video_n = int(last_video_without_extension)
@@ -311,10 +292,12 @@ class ImgstoreMixin:
     def usage(self):
         return self._queue.qsize()  # / self._CACHE_SIZE
 
-    def _info(self):
+    def report_info(self):
         # logger.info("Usage: {self.usage}%")
-        self._tqdm.n = int(self.usage)
-        self._tqdm.refresh()
+        if self._framecount % (self.INFO_FREQ) == 0 and self._verbose:
+
+            self._tqdm.n = int(self.usage)
+            self._tqdm.refresh()
 
     def write(self, frame, i, timestamp):
         frame = self.pipeline(frame)

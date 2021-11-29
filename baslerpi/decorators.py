@@ -22,9 +22,7 @@ def drive_basler(f):
                 re.match(".*(FrameRate).*", error.args[0]),
             ]
             attribute = [
-                e.groups()[0].lower()
-                for e in match_objects
-                if e is not None
+                e.groups()[0].lower() for e in match_objects if e is not None
             ][0]
 
             res = getattr(self, "_" + attribute)

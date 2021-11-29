@@ -67,7 +67,7 @@ def main(args=None, ap=None):
         ap = camera_parser(ap=ap)
         args = ap.parse_args()
 
-    setup_and_run(args, output=args.output)
+    setup_and_run(args)
 
 
 if __name__ == "__main__":

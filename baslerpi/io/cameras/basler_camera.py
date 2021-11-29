@@ -127,9 +127,7 @@ class BaslerCamera(BaseCamera):
                     maxframes
                 )  # if we want to limit the number of frames
             else:
-                self.camera.StartGrabbing(
-                    pylon.GrabStrategy_LatestImageOnly
-                )
+                self.camera.StartGrabbing(pylon.GrabStrategy_LatestImageOnly)
 
             status, img = self.grab()
 
@@ -189,18 +187,6 @@ class BaslerCamera(BaseCamera):
                 else:
                     logger.error(error)
                     logger.warning(traceback.print_exc())
-
-    def _next_image(self):
-
-        image = self._next_image_raw()
-        if self._ROI is None:
-            return image
-        else:
-            r = self._ROI
-            return image[
-                int(r[1]) : int(r[1] + r[3]),
-                int(r[0]) : int(r[0] + r[2]),
-            ]
 
     # called by BaseCamera.__exit__()
     def close(self):
@@ -276,9 +262,7 @@ class BaslerCamera(BaseCamera):
     @exposuretime.getter
     @drive_basler
     def exposuretime(self):
-        self._exposuretime = float(
-            self.camera.ExposureTime.GetValue()
-        )
+        self._exposuretime = float(self.camera.ExposureTime.GetValue())
         return self._exposuretime
 
     @exposuretime.setter
@@ -287,12 +271,8 @@ class BaslerCamera(BaseCamera):
         try:
             if not exposuretime is None:
                 self.camera.ExposureTime.SetValue(exposuretime)
-                logger.info(
-                    "Setting exposure time to %3.f", exposuretime
-                )
-            self._exposuretime = float(
-                self.camera.ExposureTime.GetValue()
-            )
+                logger.info("Setting exposure time to %3.f", exposuretime)
+            self._exposuretime = float(self.camera.ExposureTime.GetValue())
 
         except Exception as error:
             logger.warning(error)
@@ -361,9 +341,7 @@ def get_dynamic_camera_kwargs(args):
     for cls in BaslerCamera.__bases__:
         keys = keys + list(inspect.signature(cls).parameters.keys())
 
-    camera_kwargs = {
-        k: getattr(args, k) for k in vars(args) if k in keys
-    }
+    camera_kwargs = {k: getattr(args, k) for k in vars(args) if k in keys}
     return camera_kwargs
 
 

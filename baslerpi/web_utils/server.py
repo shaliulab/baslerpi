@@ -51,9 +51,7 @@ class TCPServer(threading.Thread):
                 self._count += 1
                 self._queue.put(frame)
 
-            if (time.time() - self._last_tick) > (
-                self._TICK_PERIOD / 1000
-            ):
+            if (time.time() - self._last_tick) > (self._TICK_PERIOD / 1000):
                 self._last_tick = time.time()
                 logger.info(
                     f"Computed framerate {self._count / (self._TICK_PERIOD / 1000)}"

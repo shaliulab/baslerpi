@@ -41,7 +41,7 @@ class BaseRecorder(threading.Thread):
         crf="18",
         preview=False,
         idx=0,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a recorder with framerate equal to FPS of camera
@@ -87,7 +87,7 @@ class BaseRecorder(threading.Thread):
         """
         raise NotImplementedError
 
-    def _info(self):
+    def report_info(self):
         raise NotImplementedError
 
     def save_extra_data(self, *args, **kwargs):
@@ -96,6 +96,18 @@ class BaseRecorder(threading.Thread):
     def writeFrame(self, frame, timestamp):
         self.write(frame, self._framecount, timestamp)
         self._framecount += 1
+
+    def __str__(self):
+        return f"Recorder {self.idx} on {self.camera.__str__()}"
+
+    def run_preview(self, frame):
+
+        if self._preview:
+            cv2.imshow(f"Feed from {self.__str__()}", frame)
+            if cv2.waitKey(1) == ord("q"):
+                return "quit"
+            else:
+                return
 
     def run(self):
         """
@@ -106,22 +118,22 @@ class BaseRecorder(threading.Thread):
         self._start_time = time.time()
 
         for timestamp, frame in self.camera:
+            answer = self._run(timestamp, frame)
 
-            if self.should_stop:
+            if answer == "quit":
                 break
 
-            if self._preview:
-                cv2.imshow("Frame", frame)
-                if cv2.waitKey(1) == ord("q"):
-                    break
+    def _run(self, timestamp, frame):
 
-            self.save_extra_data(timestamp)
-            self.writeFrame(frame, timestamp)
-            if (
-                self._framecount % (self.INFO_FREQ) == 0
-                and self._verbose
-            ):
-                self._info()
+        if self.should_stop:
+            return "quit"
+
+        answer = self.run_preview(frame)
+
+        self.save_extra_data(timestamp)
+        self.writeFrame(frame, timestamp)
+        self.report_info()
+        return answer
 
     @property
     def should_stop(self):
@@ -178,10 +190,44 @@ class ImgstoreRecorder(ImgstoreMixin, BaseRecorder):
         super().__init__(*args, **kwargs)
 
 
+class MultiImgstoreRecorer(ImgstoreRecorder):
+    def __init__(self, camera, *args, **kwargs):
+        self._recorders = [
+            ImgstoreRecorder(camera=camera, *args, **kwargs)
+            for _ in camera.rois
+        ]
+        super(MultiImgstoreRecorer, self).__init__(
+            camera=camera, *args, **kwargs
+        )
+
+    def open(self, path, **kwargs):
+        for idx in len(self.camera.rois):
+            if path[-1] == "/":
+                path = path[:-1]
+
+            path = path + f"_ROI_{idx}"
+            self._recorders[idx].open(path=path, **kwargs)
+
+    def run(self):
+
+        self._start_time = time.time()
+        for recorder in self._recorders:
+            recorder._start_time = self._start_time
+
+        for timestamp, frame in self.camera:
+            for i in len(self.camera.rois):
+                self._recorders[i]._run(timestamp, frame[i])
+
+    def close(self):
+        for recorder in self._recorders:
+            recorder.close()
+
+
 RECORDERS = {
     "FFMPEG": FFMPEGRecorder,
     "ImgStore": ImgstoreRecorder,
     "OpenCV": BaseRecorder,
+    "MultiImgStore": MultiImgstoreRecorer,
 }
 
 

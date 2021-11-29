@@ -71,9 +71,7 @@ class Camera(object):
         self.set_im_size(resolution)
         self.fps = fps
         self.use_tk_display = use_tk_display
-        self.display_resize = (
-            display_resize if display_resize else 1.0
-        )
+        self.display_resize = display_resize if display_resize else 1.0
         self.next_frame = 0
 
     def set_im_size(self, res):

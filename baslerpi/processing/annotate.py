@@ -101,9 +101,7 @@ class Annotator:
         else:
             binary_string = "{0:b}".format(value)
             keys = [
-                2 ** i
-                for i, v in enumerate(binary_string[::-1])
-                if v == "1"
+                2 ** i for i, v in enumerate(binary_string[::-1]) if v == "1"
             ]
             for i, key in enumerate(keys):
                 if key in self._meanings:

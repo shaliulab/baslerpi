@@ -206,8 +206,22 @@ class BaseCamera:
     def is_last_frame(self):
         raise NotImplementedError
 
-    def _next_image(self):
+    def _next_image_raw(self):
         raise NotImplementedError
+
+    def _next_image(self):
+
+        image = self._next_image_raw()
+        data = []
+        for r in self.rois:
+            data.append(
+                image[
+                    int(r[1]) : int(r[1] + r[3]),
+                    int(r[0]) : int(r[0] + r[2]),
+                ]
+            )
+
+        return tuple(data)
 
     def is_open(self):
         raise NotImplementedError

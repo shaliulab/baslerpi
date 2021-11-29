@@ -24,9 +24,7 @@ class OpenCVCompressor:
     _boxSide = 700
     _minContour_area = 500
 
-    def __init__(
-        self, ntargets, shape, frequency=2, algo="MOG2", debug=False
-    ):
+    def __init__(self, ntargets, shape, frequency=2, algo="MOG2", debug=False):
         self._debug = debug
         self._ntargets = ntargets
         self._frequency = frequency
@@ -101,16 +99,11 @@ class OpenCVCompressor:
             mode=cv2.RETR_EXTERNAL,
             method=cv2.CHAIN_APPROX_SIMPLE,
         )
-        cts = [
-            ct
-            for ct in cts
-            if cv2.contourArea(ct) > self._minContour_area
-        ]
+        cts = [ct for ct in cts if cv2.contourArea(ct) > self._minContour_area]
 
         moms = [cv2.moments(ct) for ct in cts]
         positions = [
-            (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-            for M in moms
+            (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"])) for M in moms
         ]
 
         if len(positions) != self._ntargets:
@@ -162,9 +155,7 @@ class OpenCVCompressor:
             positions = self._find(frame)
 
         # rectangles = [cv2.boundingRect(ct) for ct in cts]
-        rectangles = [
-            self._rectfrompt(pt) for pt in self._last_positions
-        ]
+        rectangles = [self._rectfrompt(pt) for pt in self._last_positions]
         # assert len(rectangles) < self._ntargets*2
 
         for j, rect in enumerate(rectangles):
@@ -189,8 +180,7 @@ class OpenCVCompressor:
         if self._debug:
 
             if (
-                (self._framecount % self._frequency) == 0
-                or self.warmup
+                (self._framecount % self._frequency) == 0 or self.warmup
             ) and self._debug:
                 compressed_frame = cv2.putText(
                     compressed_frame,
@@ -227,11 +217,7 @@ class OpenCVCompressor:
 
             debugging_image = cv2.resize(
                 debugging_image,
-                tuple(
-                    (
-                        np.array(debugging_image.shape)[::-1] // 5
-                    ).tolist()
-                ),
+                tuple((np.array(debugging_image.shape)[::-1] // 5).tolist()),
                 interpolation=cv2.INTER_AREA,
             )
 
@@ -271,9 +257,7 @@ if __name__ == "__main__":
         default=300000,
         help="Camera fetches frames for this ms",
     )
-    ap.add_argument(
-        "-D", "--debug", dest="debug", action="store_true"
-    )
+    ap.add_argument("-D", "--debug", dest="debug", action="store_true")
 
     args = ap.parse_args()
     frequency = args.frequency
