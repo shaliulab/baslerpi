@@ -88,6 +88,16 @@ class BaseCamera:
         else:
             return self._rois
 
+    
+    @staticmethod
+    def _process_roi(r, fx, fy):
+        r[0] = int(r[0] * fx)
+        r[1] = int(r[1] * fy)
+        r[2] = int(r[2] * fx)
+        r[3] = int(r[3] * fy)
+        roi = tuple(r)
+        return roi
+
     def select_ROI(self):
         """
         Select only one ROI
@@ -100,7 +110,26 @@ class BaseCamera:
                 fx = self.resolution[0] / 1280
                 fy = self.resolution[1] / 960
                 img = cv2.resize(img, (1280, 960), cv2.INTER_AREA)
-                r = list(cv2.selectROI("select the area", img))
+                rois = list(cv2.selectROIs("select the area", img))
+                rois = [self._process_roi(roi, fx, fy) for roi in rois]
+                self._rois = rois
+
+        else:
+            logger.warning(f"{self} is not open")
+
+    def select_ROIs(self):
+        """
+        Select 1 or more ROIs
+        """
+
+        if self.is_open():
+
+            img = self._next_image()
+            if self.resolution[0] > 1280 or self.resolution[1] > 960:
+                fx = self.resolution[0] / 1280
+                fy = self.resolution[1] / 960
+                img = cv2.resize(img, (1280, 960), cv2.INTER_AREA)
+                r = list(cv2.selectROIs("select the area", img))
                 r[0] = int(r[0] * fx)
                 r[1] = int(r[1] * fy)
                 r[2] = int(r[2] * fx)
@@ -110,10 +139,6 @@ class BaseCamera:
 
         else:
             logger.warning(f"{self} is not open")
-
-    def select_ROIs(self):
-        pass
-
     def time_stamp(self):
         if self._start_time is None:
             return 0
