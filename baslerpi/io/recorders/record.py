@@ -201,12 +201,12 @@ class MultiImgstoreRecorder(ImgstoreRecorder):
         )
 
     def open(self, path, **kwargs):
-        for idx in len(self.camera.rois):
+        for idx in range(len(self.camera.rois)):
             if path[-1] == "/":
                 path = path[:-1]
 
-            path = path + f"_ROI_{idx}"
-            self._recorders[idx].open(path=path, **kwargs)
+            recorder_path = path + f"_ROI_{idx}"
+            self._recorders[idx].open(path=recorder_path, **kwargs)
 
     def run(self):
 
@@ -215,7 +215,7 @@ class MultiImgstoreRecorder(ImgstoreRecorder):
             recorder._start_time = self._start_time
 
         for timestamp, frame in self.camera:
-            for i in len(self.camera.rois):
+            for i in range(len(self.camera.rois)):
                 self._recorders[i]._run(timestamp, frame[i])
 
     def close(self):
