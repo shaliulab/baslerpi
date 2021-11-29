@@ -321,9 +321,9 @@ def get_parser(ap=None):
         "--verbose", choices=list(LEVELS.keys()), default="WARNING"
     )
     ap.add_argument(
-        "--select-roi",
+        "--select-rois",
         default=False,
-        dest="select_roi",
+        dest="select_rois",
         action="store_true",
     )
     return ap
@@ -373,26 +373,28 @@ def setup_logger(level):
 def run(camera, queue=None, preview=False):
 
     try:
-        for timestamp, frame in camera:
-            print(
-                "Basler camera reads: ",
-                timestamp,
-                frame.shape,
-                frame.dtype,
-                camera.computed_framerate,
-            )
-            if queue is not None:
-                queue.put((timestamp, frame))
+        for timestamp, all_rois in camera:
 
-            frame = cv2.resize(
-                frame,
-                (frame.shape[1] // 3, frame.shape[0] // 3),
-                cv2.INTER_AREA,
-            )
-            if preview:
-                cv2.imshow("Basler", frame)
-                if cv2.waitKey(1) == ord("q"):
-                    break
+            for frame in all_rois:
+                print(
+                    "Basler camera reads: ",
+                    timestamp,
+                    frame.shape,
+                    frame.dtype,
+                    camera.computed_framerate,
+                )
+                if queue is not None:
+                    queue.put((timestamp, frame))
+
+                frame = cv2.resize(
+                    frame,
+                    (frame.shape[1] // 3, frame.shape[0] // 3),
+                    cv2.INTER_AREA,
+                )
+                if preview:
+                    cv2.imshow("Basler", frame)
+                    if cv2.waitKey(1) == ord("q"):
+                        break
 
     except KeyboardInterrupt:
         return
@@ -405,7 +407,7 @@ def setup_and_run(args, **kwargs):
     camera = setup(args)
     maxframes = getattr(args, "maxframes", None)
     camera.open(maxframes=maxframes)
-    if args.select_roi:
+    if args.select_rois:
         camera.select_ROIs()
     run(camera, preview=args.preview, **kwargs)
 
