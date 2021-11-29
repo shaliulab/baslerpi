@@ -109,8 +109,8 @@ class BaseCamera:
                 fx = self.resolution[0] / 1280
                 fy = self.resolution[1] / 960
                 img = cv2.resize(img, (1280, 960), cv2.INTER_AREA)
-                rois = list(cv2.selectROIs("select the area", img))
-                rois = [self._process_roi(roi, fx, fy) for roi in rois]
+                rois = cv2.selectROI("select the area", img)
+                rois = [self._process_roi(list(roi), fx, fy) for roi in rois]
                 self._rois = rois
 
         else:
@@ -123,18 +123,15 @@ class BaseCamera:
 
         if self.is_open():
 
-            img = self._next_image()
+            img = self._next_image()[0]
             if self.resolution[0] > 1280 or self.resolution[1] > 960:
                 fx = self.resolution[0] / 1280
                 fy = self.resolution[1] / 960
                 img = cv2.resize(img, (1280, 960), cv2.INTER_AREA)
-                r = list(cv2.selectROIs("select the area", img))
-                r[0] = int(r[0] * fx)
-                r[1] = int(r[1] * fy)
-                r[2] = int(r[2] * fx)
-                r[3] = int(r[3] * fy)
-                print(r)
-                self._rois = [tuple(r)]
+                rois = cv2.selectROIs("select the area", img)
+
+                rois = [self._process_roi(list(roi), fx, fy) for roi in rois]
+                self._rois = rois
 
         else:
             logger.warning(f"{self} is not open")
@@ -216,8 +213,9 @@ class BaseCamera:
     def _next_time_image(self):
         timestamp = self.time_stamp()
         image = self._next_image()
-        self._frame_idx += 1
-        self._frames_this_second += 1
+        if image is not None:
+            self._frame_idx += 1
+            self._frames_this_second += 1
         return timestamp, image
 
     def _load_message(self):
@@ -236,17 +234,27 @@ class BaseCamera:
 
     def _next_image(self):
 
-        image = self._next_image_raw()
-        data = []
-        for r in self.rois:
-            data.append(
-                image[
-                    int(r[1]) : int(r[1] + r[3]),
-                    int(r[0]) : int(r[0] + r[2]),
-                ]
-            )
+        try:
 
-        return tuple(data)
+            image = self._next_image_raw()
+            if image is None:
+                return None
+            
+            data = []
+            for r in self.rois:
+                data.append(
+                    image[
+                        int(r[1]) : int(r[1] + r[3]),
+                        int(r[0]) : int(r[0] + r[2]),
+                    ]
+                )
+
+            data = tuple(data)
+            assert len(data) == len(self.rois)
+            return data
+        except KeyboardInterrupt:
+            return None
+
 
     def is_open(self):
         raise NotImplementedError
