@@ -37,12 +37,12 @@ def load_config(args):
     return config
 
 
-def setup(args):
+def setup(args, monitorClass=Monitor, **kwargs):
 
     level = LEVELS[args.verbose]
     setup_logger(level=level)
     config = load_config(args)
-    monitor = Monitor(camera_name="Basler", input_args=args)
+    monitor = monitorClass(camera_name=args.camera_name, input_args=args,  **kwargs)
     return config, monitor
 
 

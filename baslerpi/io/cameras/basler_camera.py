@@ -286,6 +286,7 @@ def get_parser(ap=None):
         ap = argparse.ArgumentParser()
 
     ap.add_argument("--width", type=int, default=3840)
+    ap.add_argument("--camera-name", dest="camera_name", default="Basler")
     ap.add_argument(
         "--height",
         type=int,

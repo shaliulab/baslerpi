@@ -15,14 +15,15 @@ from baslerpi.web_utils.sensor import setup as setup_sensor
 from baslerpi.exceptions import ServiceExit
 
 
-CAMERAS = {"Basler": setup_camera}
 LEVELS = {"DEBUG": 10, "INFO": 20, "WARNING": 30}
 
 
 class Monitor(threading.Thread):
     _RecorderClass = ImgStoreRecorder
+    _CAMERAS = {"Basler": setup_camera}
 
-    def __init__(self, camera_name, input_args, *args, **kwargs):
+
+    def __init__(self, camera_name, input_args, *args, sensor=None, **kwargs):
 
         self._logging_level = int(LEVELS[input_args.verbose])
 
@@ -35,7 +36,10 @@ class Monitor(threading.Thread):
         self._stop_queues = [
             multiprocessing.Queue(maxsize=1) for _ in self.camera.rois
         ]
-        sensor = setup_sensor(input_args)
+        
+        if sensor is None:
+            sensor = setup_sensor(input_args)
+        
         kwargs.update(
             {
                 "sensor": sensor,
@@ -71,7 +75,7 @@ class Monitor(threading.Thread):
 
     def setup_camera(self, camera_name, args):
         self._camera_name = camera_name
-        camera = CAMERAS[camera_name](args)
+        camera = self._CAMERAS[camera_name](args)
 
         maxframes = getattr(args, "maxframes", None)
         camera.open(maxframes=maxframes)
