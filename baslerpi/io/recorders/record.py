@@ -22,8 +22,8 @@ logger.setLevel(logging.INFO)
 LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
 
 
-class BaseRecorder(threading.Thread):
-    # class BaseRecorder(multiprocessing.Process):
+# class BaseRecorder(threading.Thread):
+class BaseRecorder(multiprocessing.Process):
     """
     Take an iterable source object which returns (timestamp, frame)
     in every iteration and save to a path determined in the open() method
@@ -164,38 +164,60 @@ class BaseRecorder(threading.Thread):
         """
 
         self._start_time = time.time()
-        while self._data_queue.qsize() < 30:
-            time.sleep(0.1)
-        self._async_writer.start()
 
-        while self._async_writer.is_alive():
-            self._report_cache_usage()
-            self.save_extra_data(self._async_writer.timestamp)
-            time.sleep(0.1)
-            if self.should_stop:
-                time.sleep(5)
-                if self.should_stop:
-                    break
+        try:
 
-        self._async_writer._close()
-        self._async_writer.join()
-        print(self, " has terminated successfully")
-        return 0
+            while self._async_writer._need_to_run():
+                time.sleep(0.1)
+            
+            time.sleep(2)
+            self._async_writer.start()
+
+            while self._async_writer.is_alive():
+                self._report_cache_usage()
+                self.save_extra_data(self._async_writer.timestamp)
+                time.sleep(0.1)
+                if self.should_stop():
+                    time.sleep(5)
+                    if self.should_stop():
+                        break
+
+            self._async_writer._close()
+            print("Waiting for async writer to finish")
+            print(self._async_writer)
+            self._async_writer.join()
+
+        except ServiceExit:
+            pass
+        finally:
+            self._async_writer._close()
+            
+            if self._data_queue.qsize() != 0:
+                print(self, " has not terminated successfully")
+                return 1
+            else:
+                print(self, " has terminated successfully")
+                return 0
+
 
     def _close_source(self):
         if not self.reads_from_queue:
             camera = self._data_queue
             camera.close()
 
-    @property
     def should_stop(self):
 
         duration_reached = self.running_for_seconds >= self._duration
-        return (
+        result = (
             duration_reached
             or self.max_frames_reached
             or self._stop_event.is_set()
         )
+
+        if result:
+            print("SHOULD STOP!")
+
+        return result
 
     @property
     def running_for_seconds(self):

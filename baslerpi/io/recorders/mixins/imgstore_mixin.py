@@ -23,7 +23,7 @@ class AsyncWriter(threading.Thread):
     """
 
     def __init__(
-        self, fmt, data_queue, stop_queue, logging_level=30, *args, **kwargs
+        self, fmt, data_queue, stop_queue, path, logging_level=30, *args, **kwargs
     ):
         # Initialize video writer
         self._data_queue = data_queue
@@ -32,10 +32,11 @@ class AsyncWriter(threading.Thread):
         self._stop_time = None
         self._fmt = fmt
         self._video_writer = imgstore.new_for_format(fmt=fmt, **kwargs)
-        self._current_chunk = 0
+        self._current_chunk = -1
         self._n_saved_frames = 0
         self._logging_level = logging_level
         self._timestamp = 0
+        self._path = path
         super().__init__(*args)
 
     @property
@@ -62,7 +63,9 @@ class AsyncWriter(threading.Thread):
         else:
             timestamp, i, frame = data
             self._timestamp = timestamp
+            # print("Writing data to video imgstore writer")
             self._write(timestamp, i, frame)
+            # print("Checking if a new chunk is produced")
             if self._has_new_chunk():
                 self._save_first_frame_of_chunk(frame)
 
@@ -73,13 +76,16 @@ class AsyncWriter(threading.Thread):
             return self._stop_queue.get()
 
     def _need_to_run(self):
-        queue_condition = (
-            self._stop_queue.empty() or not self._data_queue.empty()
-        )
-        event_condition = (
-            not self._stop_event.is_set() and not self._data_queue.empty()
-        )
-        return queue_condition and event_condition
+        queue_is_empty = self._data_queue.qsize() == 0
+        if not self._stop_event.is_set():
+            result = not queue_is_empty
+        else:
+            result = not queue_is_empty
+
+        # print("Need to run: ", result)
+
+        return result
+
 
     def _has_new_chunk(self):
         current_chunk = self._video_writer._chunk_n
@@ -98,30 +104,50 @@ class AsyncWriter(threading.Thread):
 
     def run(self):
 
-        while self._need_to_run():
-            self._handle_data_queue()
-            # if self._logging_level <= 10:
-            #     print("I will continue the while loop: ", self._need_to_run())
-            msg = self._handle_stop_queue()
-            if msg == "STOP" and not self._need_to_run():
-                logger.info("CMD STOP received. Stopping recording!")
-                self._stop_event.set()
-                break
+        try:
+            while True:
+                self._handle_data_queue()
+                # if self._logging_level <= 10:
+                #     print("I will continue the while loop: ", self._need_to_run())
+                
+                if self._need_to_run():
+                    pass
+                else:
+                    time.sleep(5)
+                    if self._need_to_run():
+                        pass
+                    else:
+                        break
 
-        self._handle_stop_queue()
-        # wait for the handling to be finished
-        # by the queue thread and then close the queue!
-        time.sleep(1)
-        print("Closing video writer")
-        self._video_writer.close()
-        # give a bit of time to the video writer to actually close
-        time.sleep(2)
-        print("Async writer has terminated successfully")
-        return 0
+
+                msg = self._handle_stop_queue()
+                if msg == "STOP":
+                    print("CMD STOP received. Stopping recording!")
+                    self._stop_event.set()
+                    while not self._data_queue.empty():
+                        self._handle_data_queue()
+                        if self._data_queue.empty():
+                            time.sleep(1)
+            
+        except ServiceExit:
+            pass
+
+        finally:    
+            # print(f"Exit while loop because need_to_run: {self._need_to_run()}. {self._stop_event.is_set()} and {not self._data_queue.empty()}")
+
+            self._handle_stop_queue()
+            # wait for the handling to be finished
+            # by the queue thread and then close the queue!
+            time.sleep(1)
+            print("Closing video writer")
+            self._video_writer.close()
+            # give a bit of time to the video writer to actually close
+            time.sleep(2)
+            print("Async writer has terminated successfully")
+            return 0
 
     def _close(self):
         logger.info("Quiting recorder...")
-        self._stop_queue.put("STOP")
 
 
 class ImgStoreMixin:
@@ -206,6 +232,8 @@ class ImgStoreMixin:
             "imgdtype": self._dtype,
             "chunksize": self._chunksize,
             "roi": self._roi,
+            "path": self._path,
+            "logging_level": logging_level,
         }
 
         kwargs.update(async_writer_kwargs)
@@ -213,17 +241,17 @@ class ImgStoreMixin:
         self._async_writer = self._asyncWriterClass(
             data_queue=self._data_queue,
             stop_queue=self._stop_queue,
-            logging_level=logging_level,
             **kwargs,
         )
         self._show_initialization_info()
-
-        self._tqdm = tqdm.tqdm(
-            position=self.idx,
-            total=self._CACHE_SIZE,
-            unit="",
-            desc=f"{self.name} - {self.idx}" + r" % Buffer usage",
-        )
+        
+        if not isinstance(self, multiprocessing.Process):
+            self._tqdm = tqdm.tqdm(
+                position=self.idx,
+                total=self._CACHE_SIZE,
+                unit="",
+                desc=f"{self.name} - {self.idx}" + r" % Buffer usage",
+            )
         self._cache_size = 0
 
     def _show_initialization_info(self):
@@ -235,8 +263,11 @@ class ImgStoreMixin:
 
     def _report_cache_usage(self):
         self._check_data_queue_is_busy()
-        self._tqdm.n = int(self._cache_size)
-        self._tqdm.refresh()
+        if isinstance(self, multiprocessing.Process):
+            print(self, f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use")
+        else:
+            self._tqdm.n = int(self._cache_size)
+            self._tqdm.refresh()
 
     def _check_data_queue_is_not_full(self):
 
@@ -270,3 +301,5 @@ class ImgStoreMixin:
     def close(self):
         self._stop_queue.put("STOP")
         self._close_source()  # only does something when running with a camera
+        if not isinstance(self, multiprocessing.Process):
+            self._tqdm.close()

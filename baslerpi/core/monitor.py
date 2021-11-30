@@ -140,7 +140,6 @@ class Monitor(threading.Thread):
                 print("Report one last time ", recorder)
                 recorder._report_cache_usage()
                 print("Close tqdm for ", recorder)
-                recorder._tqdm.close()
                 print("Joining", recorder)
                 recorder.join()
                 print("JOOOOIIIIIINEEEEDD")
