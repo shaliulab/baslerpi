@@ -1,3 +1,4 @@
+import sys
 import queue
 import argparse
 import datetime
@@ -157,6 +158,10 @@ class BaseRecorder(multiprocessing.Process):
     def __str__(self):
         return f"Recorder {self.idx} on {self._data_queue.name} ({self._data_queue.qsize()}/{self._stop_queue.qsize()})"
 
+
+    def report_cache_usage(self):
+        return self._async_writer._report_cache_usage()
+
     def run(self):
         """
         Collect frames from the source and write them to the video
@@ -174,11 +179,11 @@ class BaseRecorder(multiprocessing.Process):
             self._async_writer.start()
 
             while self._async_writer.is_alive():
-                self._report_cache_usage()
+                self.report_cache_usage()
                 self.save_extra_data(self._async_writer.timestamp)
                 time.sleep(0.1)
                 if self.should_stop():
-                    time.sleep(5)
+                    time.sleep(3)
                     if self.should_stop():
                         break
 
@@ -194,7 +199,7 @@ class BaseRecorder(multiprocessing.Process):
             
             if self._data_queue.qsize() != 0:
                 print(self, " has not terminated successfully")
-                return 1
+                sys.exit(1)
             else:
                 print(self, " has terminated successfully")
                 return 0

@@ -26,7 +26,7 @@ class Monitor(threading.Thread):
 
         self._logging_level = int(LEVELS[input_args.verbose])
 
-        queue_size = int(self._RecorderClass._CACHE_SIZE)
+        queue_size = int(self._RecorderClass._asyncWriterClass._CACHE_SIZE)
         self.setup_camera(camera_name=camera_name, args=input_args)
 
         self._queues = [
@@ -138,7 +138,7 @@ class Monitor(threading.Thread):
                 # print("Terminating")
                 # recorder.terminate()
                 print("Report one last time ", recorder)
-                recorder._report_cache_usage()
+                recorder._async_writer._report_cache_usage()
                 print("Close tqdm for ", recorder)
                 print("Joining", recorder)
                 recorder.join()

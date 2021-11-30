@@ -21,9 +21,10 @@ class AsyncWriter(threading.Thread):
     """
     Asynchronous writer of frames using the imgstore module
     """
+    _CACHE_SIZE = int(500)
 
     def __init__(
-        self, fmt, data_queue, stop_queue, path, logging_level=30, *args, **kwargs
+        self, fmt, data_queue, stop_queue, path, logging_level=30, make_tqdm=False, idx=0, *args, **kwargs
     ):
         # Initialize video writer
         self._data_queue = data_queue
@@ -36,12 +37,31 @@ class AsyncWriter(threading.Thread):
         self._n_saved_frames = 0
         self._logging_level = logging_level
         self._timestamp = 0
+        self._cache_size = 0
+
         self._path = path
+        self._make_tqdm = make_tqdm
+        self.idx = idx
+
+        if make_tqdm:
+            self._tqdm = tqdm.tqdm(
+                position=self.idx,
+                total=self._CACHE_SIZE,
+                unit="",
+                desc=f"{self.name} - {self.idx}" + r" % Buffer usage",
+            )
+
         super().__init__(*args)
 
     @property
     def n_saved_frames(self):
         return self._n_saved_frames
+
+    @property
+    def name(self):
+
+        return self._data_queue.__str__()
+
 
     @property
     def timestamp(self):
@@ -55,6 +75,7 @@ class AsyncWriter(threading.Thread):
 
     def _handle_data_queue(self):
         try:
+            self._report_cache_usage()
             data = self._data_queue.get(False)
         except queue.Empty:
             pass
@@ -148,6 +169,30 @@ class AsyncWriter(threading.Thread):
 
     def _close(self):
         logger.info("Quiting recorder...")
+        if self._make_tqdm:
+            self._tqdm.close()
+
+    def _check_data_queue_is_busy(self):
+        try:
+            cache_size = self._data_queue.qsize()
+        except Exception as error:
+            print(error)
+            self._cache_size = 0
+        else:
+            if cache_size != self._cache_size:
+                logger.info(
+                    f"{cache_size} frames are accumulated in the cache (max {self._CACHE_SIZE} frames)"
+                )
+                self._cache_size = cache_size
+
+    def _report_cache_usage(self):
+        self._check_data_queue_is_busy()
+        if self._make_tqdm:
+            self._tqdm.n = int(self._cache_size)
+            self._tqdm.refresh()
+        else:
+            print(self, f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use")
+
 
 
 class ImgStoreMixin:
@@ -163,7 +208,6 @@ class ImgStoreMixin:
     _asyncWriterClass = AsyncWriter
     # if you dont have enough RAM, you dont want to make this number huge
     # otherwise you will run out of RAM
-    _CACHE_SIZE = int(500)
 
     @property
     def n_saved_frames(self):
@@ -241,18 +285,12 @@ class ImgStoreMixin:
         self._async_writer = self._asyncWriterClass(
             data_queue=self._data_queue,
             stop_queue=self._stop_queue,
+            make_tqdm=False,
+            idx=self.idx,
             **kwargs,
         )
         self._show_initialization_info()
         
-        if not isinstance(self, multiprocessing.Process):
-            self._tqdm = tqdm.tqdm(
-                position=self.idx,
-                total=self._CACHE_SIZE,
-                unit="",
-                desc=f"{self.name} - {self.idx}" + r" % Buffer usage",
-            )
-        self._cache_size = 0
 
     def _show_initialization_info(self):
         logger.info("Initializing Imgstore video with following properties:")
@@ -261,13 +299,6 @@ class ImgStoreMixin:
         logger.info("  Format (codec): %s", self._async_writer._fmt)
         logger.info("  Chunksize: %s", self._chunksize)
 
-    def _report_cache_usage(self):
-        self._check_data_queue_is_busy()
-        if isinstance(self, multiprocessing.Process):
-            print(self, f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use")
-        else:
-            self._tqdm.n = int(self._cache_size)
-            self._tqdm.refresh()
 
     def _check_data_queue_is_not_full(self):
 
@@ -275,18 +306,7 @@ class ImgStoreMixin:
             self._lost_frames += 1
             logger.warning("Lost %5.d frames" % self._lost_frames)
 
-    def _check_data_queue_is_busy(self):
-        try:
-            cache_size = self._data_queue.qsize()
-        except Exception as error:
-            print(error)
-            self._cache_size = 0
-        else:
-            if cache_size != self._cache_size:
-                logger.info(
-                    f"{cache_size} frames are accumulated in the cache (max {self._CACHE_SIZE} frames)"
-                )
-                self._cache_size = cache_size
+
 
     def write(self, frame, i, timestamp):
 
@@ -301,5 +321,3 @@ class ImgStoreMixin:
     def close(self):
         self._stop_queue.put("STOP")
         self._close_source()  # only does something when running with a camera
-        if not isinstance(self, multiprocessing.Process):
-            self._tqdm.close()
