@@ -4,43 +4,83 @@ import time
 logger = logging.getLogger(__name__)
 import multiprocessing
 import threading
+import signal
 
-from baslerpi.io.recorders import ImgstoreRecorder
+from baslerpi.io.recorders import ImgStoreRecorder
+from baslerpi.io.recorders.record import setup as setup_recorder
+
 from baslerpi.utils import document_for_reproducibility
 from baslerpi.io.cameras.basler_camera import setup as setup_camera
+from baslerpi.web_utils.sensor import setup as setup_sensor
+from baslerpi.exceptions import ServiceExit
+
 
 CAMERAS = {"Basler": setup_camera}
+LEVELS = {"DEBUG": 10, "INFO": 20, "WARNING": 30}
+
 
 class Monitor(threading.Thread):
-    _RecorderClass = ImgstoreRecorder
+    _RecorderClass = ImgStoreRecorder
 
-    def __init__(self, camera_name, args, *args, **kwargs):
+    def __init__(self, camera_name, input_args, *args, **kwargs):
 
-        queue_size = self._RecorderClass._CACHE_SIZE
-        self.setup_camera(camera_name, args)
-        self._queues = [multiprocessing.Queue(maxsize=queue_size) for _ in self.camera.rois]
+        self._logging_level = int(LEVELS[input_args.verbose])
 
-        self._recorders = [
-            self._RecorderClass(
-                *args,
-                source=self._queues[i],
-                resolution=self.camera.rois[i][2:4],
-                **kwargs
-            )
-            for i in self.camera.rois
+        queue_size = int(self._RecorderClass._CACHE_SIZE)
+        self.setup_camera(camera_name=camera_name, args=input_args)
+
+        self._queues = [
+            multiprocessing.Queue(maxsize=queue_size) for _ in self.camera.rois
         ]
+        self._stop_queues = [
+            multiprocessing.Queue(maxsize=1) for _ in self.camera.rois
+        ]
+        sensor = setup_sensor(input_args)
+        kwargs.update(
+            {
+                "sensor": sensor,
+            }
+        )
+        self._stop_event = multiprocessing.Event()
 
+        self._recorders = []
+
+        for i in range(len(self.camera.rois)):
+            kwargs.update(
+                {
+                    "resolution": self.camera.rois[i][2:4],
+                }
+            )
+
+            data_queue = self._queues[i]
+            data_queue.name = camera_name
+
+            recorder = setup_recorder(
+                input_args,
+                *args,
+                recorder_name=self._RecorderClass.__name__,
+                source=data_queue,
+                stop_queue=self._stop_queues[i],
+                idx=i,
+                roi=self.camera.rois[i],
+                **kwargs,
+            )
+            self._recorders.append(recorder)
+
+        super(Monitor, self).__init__()
 
     def setup_camera(self, camera_name, args):
         self._camera_name = camera_name
         camera = CAMERAS[camera_name](args)
-        camera.open()
-        if self.select_roi:
-            camera.select_ROI()
+
+        maxframes = getattr(args, "maxframes", None)
+        camera.open(maxframes=maxframes)
+
+        if args.select_rois:
+            camera.select_ROIs()
 
         self.camera = camera
         return camera
-
 
     def open(self, path, **kwargs):
         for idx in range(len(self.camera.rois)):
@@ -48,34 +88,92 @@ class Monitor(threading.Thread):
                 path = path[:-1]
 
             recorder_path = path + f"_ROI_{idx}"
-            self._recorders[idx].open(path=recorder_path, **kwargs)
+            self._recorders[idx].open(
+                path=recorder_path, logging_level=self._logging_level, **kwargs
+            )
 
     def run(self):
 
+        logger.info("Monitor starting")
         self._start_time = time.time()
         for recorder in self._recorders:
             recorder._start_time = self._start_time
+            recorder.start()
 
-        for timestamp, frame in self.camera:
+        for frame_idx, (timestamp, frame) in enumerate(self.camera):
+
+            if self._stop_event.is_set():
+                # if self._logging_level <= 10:
+                print("Monitor exiting")
+
+                for i in range(len(self._recorders)):
+                    if self._logging_level <= 10:
+                        print(
+                            f"Recorder {i} output queue has {self._recorders[i].buffered_frames} frames"
+                        )
+                break
+
+            # print("New frame read")
             for i in range(len(self.camera.rois)):
-                self._recorders[i].source.put((timestamp, frame[i]))
+                # self._recorders[i]._run(timestamp, frame[i])
+                recorder = self._recorders[i]
+                # logger.debug(f"Recorder {i} queue is being put a frame at t {timestamp}")
+                if self._logging_level <= 10:
+                    print(
+                        f"Recorder {i} data queue is being put a frame with shape {frame[i].shape} at t {timestamp}"
+                    )
+                self._queues[i].put((timestamp, frame_idx, frame[i]))
+                if self._logging_level <= 10:
+                    print(
+                        f"Recorder {i} data queue's has now {recorder._data_queue.qsize()} frames"
+                    )
 
+        print("Joining recorders")
+        for recorder in self._recorders:
+            if recorder.is_alive():
+                while not recorder.all_queues_have_been_emptied:
+                    time.sleep(1)
+                    print("Waiting for", recorder)
+                    # recorder._report_cache_usage()
+                # print("Terminating")
+                # recorder.terminate()
+                print("Report one last time ", recorder)
+                recorder._report_cache_usage()
+                print("Close tqdm for ", recorder)
+                recorder._tqdm.close()
+                print("Joining", recorder)
+                recorder.join()
+                print("JOOOOIIIIIINEEEEDD")
+
+        print("Done")
 
     def close(self):
+
+        # this makes the run method exit
+        # because it checks if the stop_event is set
+        self._stop_event.set()
+        logger.info("Monitor closing")
+
         for recorder in self._recorders:
             recorder.close()
 
 
+def service_shutdown(signum, frame):
+    print("Caught signal %d" % signum)
+    raise ServiceExit
+
+
 def run(monitor, **kwargs):
 
-    kwargs.update(document_for_reproducibility(monitor))
-    # print("Opening recorder")
-    monitor.open(**kwargs)
-    # print("Starting recorder")
+    signal.signal(signal.SIGTERM, service_shutdown)
+    signal.signal(signal.SIGINT, service_shutdown)
 
+    kwargs.update(document_for_reproducibility(monitor))
+    monitor.open(**kwargs)
     try:
         monitor.start()
-        monitor.join()
-    except KeyboardInterrupt:
-        pass
-    monitor.close()
+        while True:
+            time.sleep(0.5)
+
+    except ServiceExit:
+        monitor.close()

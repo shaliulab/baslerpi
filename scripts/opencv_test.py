@@ -98,9 +98,6 @@ def main():
     except Exception as error:
         print(error)
 
-    # import ipdb; ipdb.set_trace()
-    # sys.exit(exitCode)
-
 
 if __name__ == "__main__":
     main()

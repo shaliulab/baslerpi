@@ -1,33 +1,33 @@
-import argparse
-import datetime
 import logging
 import logging.config
 import json
-import math
 import os.path
 import json
+import sys
 
 from baslerpi.io.cameras.basler_camera import (
     get_parser as camera_parser,
 )
-from baslerpi.io.recorders.record import setup as setup_recorder
-from baslerpi.io.recorders.record import RECORDERS
+
 from baslerpi.io.recorders.record import get_parser as recorder_parser
 from baslerpi.core.monitor import run as run_monitor
-from baslerpi.web_utils.sensor import setup as setup_sensor
 from baslerpi.core import Monitor
 
 LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
 logger = logging.getLogger(__name__)
+recorder_logger = logging.getLogger("baslerpi.io.record")
+recorder_logger.setLevel(logging.DEBUG)
 
 
 def setup_logger(level):
 
     logger = logging.getLogger(__name__)
-    logger.setLevel(level)
+    # logger.setLevel(level)
+    recorder_logger.setLevel(level)
     console = logging.StreamHandler()
     console.setLevel(level)
     logger.addHandler(console)
+    recorder_logger.addHandler(console)
 
 
 def load_config(args):
@@ -42,9 +42,7 @@ def setup(args):
     level = LEVELS[args.verbose]
     setup_logger(level=level)
     config = load_config(args)
-    sensor = setup_sensor(args)
-    # recorder = setup_recorder(args, camera, sensor)
-    monitor = Monitor(args.camera, sensor=sensor)
+    monitor = Monitor(camera_name="Basler", input_args=args)
     return config, monitor
 
 
@@ -63,6 +61,7 @@ def main(args=None, ap=None):
         args = ap.parse_args()
 
     setup_and_run(args)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
