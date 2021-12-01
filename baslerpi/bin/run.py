@@ -4,6 +4,7 @@ import json
 import os.path
 import json
 import sys
+import signal
 
 from baslerpi.io.cameras.basler_camera import (
     get_parser as camera_parser,
@@ -12,11 +13,16 @@ from baslerpi.io.cameras.basler_camera import (
 from baslerpi.io.recorders.record import get_parser as recorder_parser
 from baslerpi.core.monitor import run as run_monitor
 from baslerpi.core import Monitor
+from baslerpi.exceptions import ServiceExit
 
 LEVELS = {"DEBUG": 0, "INFO": 10, "WARNING": 20, "ERROR": 30}
 logger = logging.getLogger(__name__)
 recorder_logger = logging.getLogger("baslerpi.io.record")
 recorder_logger.setLevel(logging.DEBUG)
+
+def service_shutdown(signum, frame):
+    print("Caught signal %d" % signum)
+    raise ServiceExit
 
 
 def setup_logger(level):
@@ -54,6 +60,9 @@ def setup_and_run(args, **kwargs):
 
 
 def main(args=None, ap=None):
+
+    signal.signal(signal.SIGTERM, service_shutdown)
+    signal.signal(signal.SIGINT, service_shutdown)
 
     if args is None:
         ap = recorder_parser(ap=ap)

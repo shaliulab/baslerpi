@@ -4,7 +4,6 @@ import time
 logger = logging.getLogger(__name__)
 import multiprocessing
 import threading
-import signal
 
 from baslerpi.io.recorders import ImgStoreRecorder
 from baslerpi.io.recorders.record import setup as setup_recorder
@@ -161,15 +160,7 @@ class Monitor(threading.Thread):
             recorder.close()
 
 
-def service_shutdown(signum, frame):
-    print("Caught signal %d" % signum)
-    raise ServiceExit
-
-
 def run(monitor, **kwargs):
-
-    signal.signal(signal.SIGTERM, service_shutdown)
-    signal.signal(signal.SIGINT, service_shutdown)
 
     kwargs.update(document_for_reproducibility(monitor))
     monitor.open(**kwargs)
