@@ -65,6 +65,9 @@ class AsyncWriter(threading.Thread):
 
         super().__init__(*args)
 
+    def __str__(self):
+        return self._data_queue.name
+
     @property
     def n_saved_frames(self):
         return self._n_saved_frames
