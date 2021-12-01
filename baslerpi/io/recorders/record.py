@@ -198,6 +198,7 @@ class BaseRecorder(multiprocessing.Process):
 
     def _init_run(self):
         while not self._async_writer._need_to_run():
+            print("Waiting in init_run")
             time.sleep(0.1)
 
         time.sleep(2)

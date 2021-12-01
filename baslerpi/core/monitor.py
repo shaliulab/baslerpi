@@ -127,7 +127,10 @@ class Monitor(threading.Thread):
                 break
 
             if self._stop_queue is not None:
-                msg = self._stop_queue.get()
+                try:
+                    msg = self._stop_queue.get(False)
+                except queue.Empty:
+                    msg = None
                 if msg == "STOP":
                     self._stop_event.set()
 
@@ -182,9 +185,10 @@ def run(monitor, **kwargs):
     try:
         monitor.start()
         time.sleep(5)
-        while monitor.is_alive():
-            print("Running time sleep forever")
-            time.sleep(0.5)
+        monitor.join()
+        #while monitor.is_alive():
+        #    print("Running time sleep forever")
+        #    time.sleep(0.5)
 
     except ServiceExit:
         print("ServiceExit captured at Monitor level")
@@ -195,7 +199,9 @@ def run(monitor, **kwargs):
         print(f"Joining monitor {monitor}")
         monitor.join()
         print(f"Joined monitor {monitor}")
-        print(f"stop_queue size: {monitor._stop_queue.qsize()}")
+        if monitor._stop_queue is not None:
+            print(f"stop_queue size: {monitor._stop_queue.qsize()}")
+
         for some_queue in monitor._stop_queues:
             print(f"{some_queue} size: {some_queue.qsize()}")
         for some_queue in monitor._queues:
