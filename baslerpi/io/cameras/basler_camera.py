@@ -60,6 +60,14 @@ class BaslerCamera(BaseCamera):
         self.camera.Width.SetValue(self._width)
         self.camera.Height.SetValue(self._height)
 
+    @staticmethod
+    def configure_output_path(path, idx):
+        if path[-1] == "/":
+            path = path[:-1]
+
+        recorder_path = path + f"_ROI_{idx}"
+        return recorder_path
+
     def grab(self):
 
         grabResult = self.camera.RetrieveResult(

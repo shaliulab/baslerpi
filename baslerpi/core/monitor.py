@@ -97,10 +97,9 @@ class Monitor(threading.Thread):
 
     def open(self, path, **kwargs):
         for idx in range(len(self.camera.rois)):
-            if path[-1] == "/":
-                path = path[:-1]
+                        
+            recorder_path = self.camera.configure_output_path(path, idx)
 
-            recorder_path = path + f"_ROI_{idx}"
             self._recorders[idx].open(
                 path=recorder_path, logging_level=self._logging_level, **kwargs
             )
