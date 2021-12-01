@@ -47,6 +47,7 @@ class AsyncWriter(threading.Thread):
         self._n_saved_frames = 0
         self._logging_level = logging_level
         self._timestamp = 0
+        self._last_tick = 0
         self._cache_size = 0
 
         self._path = path
@@ -93,6 +94,7 @@ class AsyncWriter(threading.Thread):
         else:
             timestamp, i, frame = data
             self._timestamp = timestamp
+            self._last_tick = timestamp / 1000
             # print("Writing data to video imgstore writer")
             self._write(timestamp, i, frame)
             # print("Checking if a new chunk is produced")
@@ -197,14 +199,15 @@ class AsyncWriter(threading.Thread):
 
     def _report_cache_usage(self):
         self._check_data_queue_is_busy()
-        if self._make_tqdm:
-            self._tqdm.n = int(self._cache_size)
-            self._tqdm.refresh()
-        else:
-            print(
-                self,
-                f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use",
-            )
+        if int(self._last_tick) % self.INFO_FREQ == 0:
+            if self._make_tqdm:
+                self._tqdm.n = int(self._cache_size)
+                self._tqdm.refresh()
+            else:
+                print(
+                    self,
+                    f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use",
+                )
 
 
 class ImgStoreMixin:
@@ -251,7 +254,7 @@ class ImgStoreMixin:
     def save_extra_data(self, timestamp):
 
         if self._sensor is not None and timestamp > (
-            self.self._last_tick + self.EXTRA_DATA_FREQ
+            (self.self._last_update + self.EXTRA_DATA_FREQ)*1000
         ):
             environmental_data = self._sensor.query(timeout=1)
             if environmental_data is not None:
@@ -261,7 +264,7 @@ class ImgStoreMixin:
                     light=environmental_data["light"],
                     time=timestamp,
                 )
-            self.self._last_tick = timestamp
+            self._last_update = timestamp / 1000
 
         else:
             self._save_extra_data(
@@ -321,7 +324,8 @@ class ImgStoreMixin:
         self._check_data_queue_is_not_full()
         if self._logging_level <= 10:
             print(self._async_writer.is_alive())
-        self._self._data_queue.put((frame, i, timestamp))
+        self._data_queue.put((frame, i, timestamp))
+        self._last_tick = timestamp / 1000
         self._check_data_queue_is_busy()
         if self._has_new_chunk():
             self._save_first_frame_of_chunk(frame)

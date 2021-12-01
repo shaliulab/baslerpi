@@ -30,7 +30,7 @@ class BaseRecorder(multiprocessing.Process):
     in every iteration and save to a path determined in the open() method
     """
 
-    EXTRA_DATA_FREQ = 5000  # ms
+    EXTRA_DATA_FREQ = 5  # s
     INFO_FREQ = 1  # s
 
     def __init__(
@@ -83,6 +83,7 @@ class BaseRecorder(multiprocessing.Process):
         self._roi = roi
         self._start_time = None
         self._last_tick = 0
+        self._last_update = 0
         self._async_writer = None
 
         super().__init__()
