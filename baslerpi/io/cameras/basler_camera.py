@@ -363,10 +363,10 @@ def setup(args=None, camera_name="Basler", **kwargs):
 
     camera_kwargs = {
         "framerate": getattr(
-            args, "basler_framerate", getattr(args, "framerate")
+            args, f"{camera_name.lower()}_framerate", getattr(args, "framerate")
         ),
         "exposure": getattr(
-            args, "basler_exposure", getattr(args, "exposure")
+            args, f"{camera_name.lower()}_exposure", getattr(args, "exposure")
         ),
         "width": args.width,
         "height": args.height,
