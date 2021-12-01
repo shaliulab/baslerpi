@@ -35,7 +35,8 @@ class Monitor(threading.Thread):
         self._logging_level = int(LEVELS[input_args.verbose])
 
         queue_size = int(self._RecorderClass._asyncWriterClass._CACHE_SIZE)
-        self.setup_camera(camera_name=camera_name, args=input_args)
+        rois = kwargs.pop("rois", None)
+        self.setup_camera(camera_name=camera_name, args=input_args, rois=rois)
 
         self._stop_queue = stop_queue
 
@@ -82,9 +83,11 @@ class Monitor(threading.Thread):
 
         super(Monitor, self).__init__()
 
-    def setup_camera(self, camera_name, args):
+    def setup_camera(self, camera_name, args, **kwargs):
         self._camera_name = camera_name
-        camera = self._CAMERAS[camera_name](args)
+        print(kwargs)
+        camera = self._CAMERAS[camera_name](args, **kwargs)
+        print(camera.rois)
 
         maxframes = getattr(args, "maxframes", None)
         camera.open(maxframes=maxframes)
@@ -103,6 +106,7 @@ class Monitor(threading.Thread):
             self._recorders[idx].open(
                 path=recorder_path, logging_level=self._logging_level, **kwargs
             )
+            print(f"{self._recorders[idx]} for {self.camera} has recorder_path = {recorder_path}")
 
     def run(self):
 
