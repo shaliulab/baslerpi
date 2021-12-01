@@ -287,11 +287,14 @@ RECORDERS = {
 }
 
 
-def setup(args, recorder_name, source, sensor=None, idx=0, **kwargs):
+def setup(args, recorder_name, source, sensor=None, idx=0, framerate=None, **kwargs):
 
     RecorderClass = RECORDERS[recorder_name]
 
-    framerate = getattr(args, "framerate", kwargs.pop("framerate", 30))
+    if framerate is None:
+        framerate = getattr(args, "framerate", kwargs.pop("framerate", 30))
+    else:
+        pass
     maxframes = getattr(args, "maxframes", 0)
     preview = getattr(args, "preview", False)
 

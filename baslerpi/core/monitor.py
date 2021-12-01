@@ -77,6 +77,7 @@ class Monitor(threading.Thread):
                 stop_queue=self._stop_queues[i],
                 idx=i,
                 roi=self.camera.rois[i],
+                framerate=self.camera.framerate,
                 **kwargs,
             )
             self._recorders.append(recorder)
