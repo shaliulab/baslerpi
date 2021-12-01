@@ -4,6 +4,7 @@ import time
 logger = logging.getLogger(__name__)
 import multiprocessing
 import threading
+import queue
 
 from baslerpi.io.recorders import ImgStoreRecorder
 from baslerpi.io.recorders.record import setup as setup_recorder
@@ -158,10 +159,10 @@ class Monitor(threading.Thread):
                 recorder._async_writer._report_cache_usage()
                 print("Close tqdm for ", recorder)
                 print("Joining", recorder)
-                recorder.join()
-                print("JOOOOIIIIIINEEEEDD")
+            recorder.join()
+            print("JOOOOIIIIIINEEEEDD")
 
-        print("Done")
+        print("Joined all recorders")
 
     def close(self):
 
@@ -180,8 +181,29 @@ def run(monitor, **kwargs):
     monitor.open(**kwargs)
     try:
         monitor.start()
-        while True:
+        time.sleep(5)
+        while monitor.is_alive():
+            print("Running time sleep forever")
             time.sleep(0.5)
 
     except ServiceExit:
+        print("ServiceExit captured at Monitor level")
         monitor.close()
+    except Exception as error:
+        print(error)
+    finally:
+        print(f"Joining monitor {monitor}")
+        monitor.join()
+        print(f"Joined monitor {monitor}")
+        print(f"stop_queue size: {monitor._stop_queue.qsize()}")
+        for some_queue in monitor._stop_queues:
+            print(f"{some_queue} size: {some_queue.qsize()}")
+        for some_queue in monitor._queues:
+            while some_queue.qsize() != 0:
+                print(f"Wait! {some_queue} size: {some_queue.qsize()}")
+                time.sleep(1)
+                try:
+                    data = some_queue.get(False)
+                    print(data)
+                except queue.Empty:
+                    pass

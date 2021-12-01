@@ -210,7 +210,7 @@ class BaseRecorder(multiprocessing.Process):
             self.save_extra_data(self._async_writer.timestamp)
             time.sleep(0.1)
             if self.should_stop():
-                time.sleep(3)
+                time.sleep(5)
                 if self.should_stop():
                     print("Recorder should stop")
                     break
@@ -228,10 +228,16 @@ class BaseRecorder(multiprocessing.Process):
     def should_stop(self):
 
         duration_reached = self.running_for_seconds >= self._duration
+        try:
+            msg = self._stop_queue.get(False)
+        except queue.Empty:
+            msg = None
+
         result = (
             duration_reached
             or self.max_frames_reached
             or self._stop_event.is_set()
+            or msg == "STOP"
         )
 
         if result:

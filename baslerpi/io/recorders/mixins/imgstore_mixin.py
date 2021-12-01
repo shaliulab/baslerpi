@@ -214,6 +214,8 @@ class AsyncWriter(threading.Thread):
                     f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use",
                 )
 
+        print(int(self._last_tick) % self.INFO_FREQ == 0)
+
 
 class ImgStoreMixin:
     """
