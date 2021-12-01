@@ -23,7 +23,7 @@ class AsyncWriter(threading.Thread):
     """
 
     _CACHE_SIZE = int(500)
-    INFO_FREQ = 2 #s
+    INFO_FREQ = 2000 # ms
 
     def __init__(
         self,
@@ -95,7 +95,6 @@ class AsyncWriter(threading.Thread):
         else:
             timestamp, i, frame = data
             self._timestamp = timestamp
-            self._last_tick = timestamp / 1000
             # print("Writing data to video imgstore writer")
             self._write(timestamp, i, frame)
             # print("Checking if a new chunk is produced")
@@ -204,7 +203,7 @@ class AsyncWriter(threading.Thread):
 
     def _report_cache_usage(self):
         self._check_data_queue_is_busy()
-        if int(self._last_tick) % self.INFO_FREQ == 0:
+        if (self._last_tick + self.INFO_FREQ) < self._timestamp:
             if self._make_tqdm:
                 self._tqdm.n = int(self._cache_size)
                 self._tqdm.refresh()
@@ -213,6 +212,7 @@ class AsyncWriter(threading.Thread):
                     self,
                     f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use",
                 )
+            self._last_tick = self._timestamp
 
 class ImgStoreMixin:
     """
@@ -220,7 +220,7 @@ class ImgStoreMixin:
     """
 
     _CHUNK_DURATION_SECONDS = 300
-    EXTRA_DATA_FREQ = 5 #s
+    EXTRA_DATA_FREQ = 5000 #s
     _dtype = np.uint8
     # look here for possible formats:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
@@ -269,7 +269,7 @@ class ImgStoreMixin:
                     light=environmental_data["light"],
                     time=timestamp,
                 )
-            self._last_update = timestamp / 1000
+            self._last_update = timestamp
 
         else:
             self._save_extra_data(
@@ -330,7 +330,7 @@ class ImgStoreMixin:
         if self._logging_level <= 10:
             print(self._async_writer.is_alive())
         self._data_queue.put((frame, i, timestamp))
-        self._last_tick = timestamp / 1000
+        self._timestamp = timestamp
         self._check_data_queue_is_busy()
         if self._has_new_chunk():
             self._save_first_frame_of_chunk(frame)
