@@ -86,8 +86,7 @@ class Monitor(threading.Thread):
     def setup_camera(self, camera_name, args, **kwargs):
         self._camera_name = camera_name
         print(kwargs)
-        camera = self._CAMERAS[camera_name](args, **kwargs)
-        print(camera.rois)
+        camera = self._CAMERAS[camera_name](args, camera_name=camera_name, **kwargs)
 
         maxframes = getattr(args, "maxframes", None)
         camera.open(maxframes=maxframes)

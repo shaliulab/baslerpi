@@ -289,6 +289,7 @@ class ImgStoreMixin:
 
         self._path = path
         self._chunksize = self._CHUNK_DURATION_SECONDS * self._framerate
+        print(f"Framerate: {self._framerate}")
 
         async_writer_kwargs = {
             "framerate": self._framerate,
