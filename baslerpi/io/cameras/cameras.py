@@ -85,7 +85,10 @@ class BaseCamera:
     @property
     def rois(self):
         if self._rois is None:
-            return [(0, 0, *self.resolution)]
+            try:
+                return [(0, 0, *self.resolution)]
+            except:
+                raise Exception("Please open the camera before asking for its resolution")
         else:
             return self._rois
 
