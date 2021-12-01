@@ -168,26 +168,42 @@ class BaseRecorder(multiprocessing.Process):
         self._start_time = time.time()
 
         try:
+            self._init_run()
             self._run()
         except ServiceExit:
-            self._run()
+            print(f"ServiceExit detected by {self}. Please wait")
+            try:
+                self._run()
+            except Exception as error:
+                print(error)
+        except Exception as error:
+            print(error)
         finally:
             self._async_writer._close()
 
             if self._data_queue.qsize() != 0:
-                print(self, " has not terminated successfully")
+                #orphan_frames = self._data_queue.qsize()
+                #while self._data_queue.qsize() != 0:
+                #    try:
+                #        self._data_queue.get(False)
+                #    except queue.Empty:
+                #        pass
+                #print(self, f" has not terminated successfully: {orphan_frames} were orphaned")
+                print(self, f" has not terminated successfully")
                 sys.exit(1)
             else:
                 print(self, " has terminated successfully")
                 return 0
 
-    def _run(self):
 
+    def _init_run(self):
         while not self._async_writer._need_to_run():
             time.sleep(0.1)
 
         time.sleep(2)
         self._async_writer.start()
+
+    def _run(self):
 
         while self._async_writer.is_alive():
             self.report_cache_usage()
@@ -196,6 +212,7 @@ class BaseRecorder(multiprocessing.Process):
             if self.should_stop():
                 time.sleep(3)
                 if self.should_stop():
+                    print("Recorder should stop")
                     break
 
         self._async_writer._close()

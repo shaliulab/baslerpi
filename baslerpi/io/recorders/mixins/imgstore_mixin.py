@@ -121,7 +121,7 @@ class AsyncWriter(threading.Thread):
             result = not queue_is_empty
 
         # print("Need to run: ", result)
-        print(result) 
+        #print(result) 
 
         return result
 
