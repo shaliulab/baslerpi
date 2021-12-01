@@ -315,7 +315,7 @@ class ImgStoreMixin:
 
     def _check_data_queue_is_not_full(self):
 
-        if self._self._data_queue.full():
+        if self._data_queue.full():
             self._lost_frames += 1
             logger.warning("Lost %5.d frames" % self._lost_frames)
 
