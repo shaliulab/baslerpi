@@ -21,13 +21,22 @@ class Monitor(threading.Thread):
     _RecorderClass = ImgStoreRecorder
     _CAMERAS = {"Basler": setup_camera}
 
-
-    def __init__(self, camera_name, input_args, *args, sensor=None, **kwargs):
+    def __init__(
+        self,
+        camera_name,
+        input_args,
+        stop_queue=None,
+        *args,
+        sensor=None,
+        **kwargs,
+    ):
 
         self._logging_level = int(LEVELS[input_args.verbose])
 
         queue_size = int(self._RecorderClass._asyncWriterClass._CACHE_SIZE)
         self.setup_camera(camera_name=camera_name, args=input_args)
+
+        self._stop_queue = stop_queue
 
         self._queues = [
             multiprocessing.Queue(maxsize=queue_size) for _ in self.camera.rois
@@ -35,10 +44,10 @@ class Monitor(threading.Thread):
         self._stop_queues = [
             multiprocessing.Queue(maxsize=1) for _ in self.camera.rois
         ]
-        
+
         if sensor is None:
             sensor = setup_sensor(input_args)
-        
+
         kwargs.update(
             {
                 "sensor": sensor,
@@ -115,6 +124,11 @@ class Monitor(threading.Thread):
                             f"Recorder {i} output queue has {self._recorders[i].buffered_frames} frames"
                         )
                 break
+
+            if self._stop_queue is not None:
+                msg = self._stop_queue.get()
+                if msg == "STOP":
+                    self._stop_event.set()
 
             # print("New frame read")
             for i in range(len(self.camera.rois)):

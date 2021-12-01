@@ -158,7 +158,6 @@ class BaseRecorder(multiprocessing.Process):
     def __str__(self):
         return f"Recorder {self.idx} on {self._data_queue.name} ({self._data_queue.qsize()}/{self._stop_queue.qsize()})"
 
-
     def report_cache_usage(self):
         return self._async_writer._report_cache_usage()
 
@@ -171,32 +170,12 @@ class BaseRecorder(multiprocessing.Process):
         self._start_time = time.time()
 
         try:
-
-            while self._async_writer._need_to_run():
-                time.sleep(0.1)
-            
-            time.sleep(2)
-            self._async_writer.start()
-
-            while self._async_writer.is_alive():
-                self.report_cache_usage()
-                self.save_extra_data(self._async_writer.timestamp)
-                time.sleep(0.1)
-                if self.should_stop():
-                    time.sleep(3)
-                    if self.should_stop():
-                        break
-
-            self._async_writer._close()
-            print("Waiting for async writer to finish")
-            print(self._async_writer)
-            self._async_writer.join()
-
+            self._run()
         except ServiceExit:
-            pass
+            self._run()
         finally:
             self._async_writer._close()
-            
+
             if self._data_queue.qsize() != 0:
                 print(self, " has not terminated successfully")
                 sys.exit(1)
@@ -204,6 +183,26 @@ class BaseRecorder(multiprocessing.Process):
                 print(self, " has terminated successfully")
                 return 0
 
+    def _run(self):
+        while self._async_writer._need_to_run():
+            time.sleep(0.1)
+
+        time.sleep(2)
+        self._async_writer.start()
+
+        while self._async_writer.is_alive():
+            self.report_cache_usage()
+            self.save_extra_data(self._async_writer.timestamp)
+            time.sleep(0.1)
+            if self.should_stop():
+                time.sleep(3)
+                if self.should_stop():
+                    break
+
+        self._async_writer._close()
+        print("Waiting for async writer to finish")
+        print(self._async_writer)
+        self._async_writer.join()
 
     def _close_source(self):
         if not self.reads_from_queue:

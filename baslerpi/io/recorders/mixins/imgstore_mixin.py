@@ -21,10 +21,20 @@ class AsyncWriter(threading.Thread):
     """
     Asynchronous writer of frames using the imgstore module
     """
+
     _CACHE_SIZE = int(500)
 
     def __init__(
-        self, fmt, data_queue, stop_queue, path, logging_level=30, make_tqdm=False, idx=0, *args, **kwargs
+        self,
+        fmt,
+        data_queue,
+        stop_queue,
+        path,
+        logging_level=30,
+        make_tqdm=False,
+        idx=0,
+        *args,
+        **kwargs,
     ):
         # Initialize video writer
         self._data_queue = data_queue
@@ -61,7 +71,6 @@ class AsyncWriter(threading.Thread):
     def name(self):
 
         return self._data_queue.__str__()
-
 
     @property
     def timestamp(self):
@@ -107,7 +116,6 @@ class AsyncWriter(threading.Thread):
 
         return result
 
-
     def _has_new_chunk(self):
         current_chunk = self._video_writer._chunk_n
         if current_chunk > self._current_chunk:
@@ -123,37 +131,39 @@ class AsyncWriter(threading.Thread):
         )
         cv2.imwrite(last_shot_path, frame)
 
-    def run(self):
+    def _run(self):
+        while True:
+            self._handle_data_queue()
+            # if self._logging_level <= 10:
+            #     print("I will continue the while loop: ", self._need_to_run())
 
-        try:
-            while True:
-                self._handle_data_queue()
-                # if self._logging_level <= 10:
-                #     print("I will continue the while loop: ", self._need_to_run())
-                
+            if self._need_to_run():
+                pass
+            else:
+                time.sleep(5)
                 if self._need_to_run():
                     pass
                 else:
-                    time.sleep(5)
-                    if self._need_to_run():
-                        pass
-                    else:
-                        break
+                    break
 
+            msg = self._handle_stop_queue()
+            if msg == "STOP":
+                print("CMD STOP received. Stopping recording!")
+                self._stop_event.set()
+                while not self._data_queue.empty():
+                    self._handle_data_queue()
+                    if self._data_queue.empty():
+                        time.sleep(1)
 
-                msg = self._handle_stop_queue()
-                if msg == "STOP":
-                    print("CMD STOP received. Stopping recording!")
-                    self._stop_event.set()
-                    while not self._data_queue.empty():
-                        self._handle_data_queue()
-                        if self._data_queue.empty():
-                            time.sleep(1)
-            
+    def run(self):
+
+        try:
+            self._run()
+
         except ServiceExit:
-            pass
+            self._run()
 
-        finally:    
+        finally:
             # print(f"Exit while loop because need_to_run: {self._need_to_run()}. {self._stop_event.is_set()} and {not self._data_queue.empty()}")
 
             self._handle_stop_queue()
@@ -191,8 +201,10 @@ class AsyncWriter(threading.Thread):
             self._tqdm.n = int(self._cache_size)
             self._tqdm.refresh()
         else:
-            print(self, f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use")
-
+            print(
+                self,
+                f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use",
+            )
 
 
 class ImgStoreMixin:
@@ -290,7 +302,6 @@ class ImgStoreMixin:
             **kwargs,
         )
         self._show_initialization_info()
-        
 
     def _show_initialization_info(self):
         logger.info("Initializing Imgstore video with following properties:")
@@ -299,14 +310,11 @@ class ImgStoreMixin:
         logger.info("  Format (codec): %s", self._async_writer._fmt)
         logger.info("  Chunksize: %s", self._chunksize)
 
-
     def _check_data_queue_is_not_full(self):
 
         if self._self._data_queue.full():
             self._lost_frames += 1
             logger.warning("Lost %5.d frames" % self._lost_frames)
-
-
 
     def write(self, frame, i, timestamp):
 
@@ -321,3 +329,4 @@ class ImgStoreMixin:
     def close(self):
         self._stop_queue.put("STOP")
         self._close_source()  # only does something when running with a camera
+        # super().close()

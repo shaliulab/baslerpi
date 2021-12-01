@@ -98,11 +98,16 @@ class BaslerCamera(BaseCamera):
         try:
             if not getattr(self, "camera", False):
                 try:
-
                     self.camera = pylon.InstantCamera(
                         pylon.TlFactory.GetInstance().CreateFirstDevice()
                     )
                 except Exception as error:
+                    logger.error(
+                        """
+                    The Basler camera cannot be opened.
+                    Please check error trace for more info
+                    """
+                    )
                     logger.error(error)
                     logger.error(traceback.print_exc())
                     sys.exit(1)

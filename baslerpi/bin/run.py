@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 recorder_logger = logging.getLogger("baslerpi.io.record")
 recorder_logger.setLevel(logging.DEBUG)
 
+
 def service_shutdown(signum, frame):
     print("Caught signal %d" % signum)
     raise ServiceExit
@@ -48,7 +49,9 @@ def setup(args, monitorClass=Monitor, **kwargs):
     level = LEVELS[args.verbose]
     setup_logger(level=level)
     config = load_config(args)
-    monitor = monitorClass(camera_name=args.camera_name, input_args=args,  **kwargs)
+    monitor = monitorClass(
+        camera_name=args.camera_name, input_args=args, **kwargs
+    )
     return config, monitor
 
 
