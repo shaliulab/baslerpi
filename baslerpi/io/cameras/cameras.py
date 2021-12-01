@@ -30,6 +30,7 @@ class BaseCamera:
         timeout=30000,
         resolution_decrease=None,
         rois=None,
+        idx=0
     ):
         """
         The template class to generate and use video streams.
@@ -81,6 +82,7 @@ class BaseCamera:
         self.failed_count = 0
         self._resolution_decrease = resolution_decrease
         self._rois = rois
+        self.idx = idx
 
     @property
     def rois(self):

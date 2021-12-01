@@ -106,9 +106,17 @@ class BaslerCamera(BaseCamera):
         try:
             if not getattr(self, "camera", False):
                 try:
-                    self.camera = pylon.InstantCamera(
-                        pylon.TlFactory.GetInstance().CreateFirstDevice()
-                    )
+                    # Get the transport layer factory.
+                    tlFactory = pylon.TlFactory.GetInstance()
+                    devices = tlFactory.EnumerateDevices()
+                    if len(devices) == 0:
+                        raise pylon.RuntimeException("No camera present.")
+                    # Create an array of instant cameras for the found devices and avoid exceeding a maximum number of devices.
+                    # cameras = pylon.InstantCameraArray(min(len(devices), 2))
+                    self.camera = tlFactory.CreateDevice(devices[self.idx])
+                    # self.camera = pylon.InstantCamera(
+                    #     pylon.TlFactory.GetInstance().CreateFirstDevice()
+                    # )
                 except Exception as error:
                     logger.error(
                         """
@@ -359,7 +367,7 @@ def get_dynamic_camera_kwargs(args):
     return camera_kwargs
 
 
-def setup(args=None, camera_name="Basler", **kwargs):
+def setup(args=None, camera_name="Basler", idx=0, **kwargs):
 
     camera_kwargs = {
         "framerate": getattr(
@@ -374,7 +382,7 @@ def setup(args=None, camera_name="Basler", **kwargs):
     }
     camera_kwargs.update(kwargs)
     if camera_name == "Basler":
-        camera = BaslerCamera(**camera_kwargs)
+        camera = BaslerCamera(**camera_kwargs, idx=idx)
     return camera
 
 

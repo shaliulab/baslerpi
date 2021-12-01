@@ -29,14 +29,16 @@ class Monitor(threading.Thread):
         stop_queue=None,
         *args,
         sensor=None,
+        camera_idx=0,
         **kwargs,
     ):
 
         self._logging_level = int(LEVELS[input_args.verbose])
+        self._camera_idx = camera_idx
 
         queue_size = int(self._RecorderClass._asyncWriterClass._CACHE_SIZE)
         rois = kwargs.pop("rois", None)
-        self.setup_camera(camera_name=camera_name, args=input_args, rois=rois)
+        self.setup_camera(camera_name=camera_name, args=input_args, idx=camera_idx, rois=rois)
 
         self._stop_queue = stop_queue
 
