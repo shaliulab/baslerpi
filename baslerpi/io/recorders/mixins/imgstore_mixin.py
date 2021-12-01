@@ -23,6 +23,7 @@ class AsyncWriter(threading.Thread):
     """
 
     _CACHE_SIZE = int(500)
+    INFO_FREQ = 2 #s
 
     def __init__(
         self,
@@ -109,12 +110,18 @@ class AsyncWriter(threading.Thread):
 
     def _need_to_run(self):
         queue_is_empty = self._data_queue.qsize() == 0
+        #print(f"""
+        #Exit while loop because need_to_run:
+        #{self._stop_event.is_set()} and queue is empty: {queue_is_empty}
+        #""")
+
         if not self._stop_event.is_set():
             result = not queue_is_empty
         else:
             result = not queue_is_empty
 
         # print("Need to run: ", result)
+        print(result) 
 
         return result
 
@@ -158,16 +165,14 @@ class AsyncWriter(threading.Thread):
                         time.sleep(1)
 
     def run(self):
-
         try:
             self._run()
-
         except ServiceExit:
+            print("Service Exit received. Please wait")
             self._run()
-
+        except Exception as error:
+            print(error)
         finally:
-            # print(f"Exit while loop because need_to_run: {self._need_to_run()}. {self._stop_event.is_set()} and {not self._data_queue.empty()}")
-
             self._handle_stop_queue()
             # wait for the handling to be finished
             # by the queue thread and then close the queue!
@@ -216,6 +221,7 @@ class ImgStoreMixin:
     """
 
     _CHUNK_DURATION_SECONDS = 300
+    EXTRA_DATA_FREQ = 5 #s
     _dtype = np.uint8
     # look here for possible formats:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
