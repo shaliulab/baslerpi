@@ -155,7 +155,9 @@ class BaslerCamera(BaseCamera):
             if status and img is not None:
 
                 logger.info("Basler camera opened successfully")
-                self._start_time = time.time()
+                if self._start_time is None:
+                    self._start_time = time.time()
+
                 logger.info(
                     "Resolution of incoming frames: %dx%d",
                     img.shape[1],
@@ -371,7 +373,9 @@ def setup(args=None, camera_name="Basler", idx=0, **kwargs):
 
     camera_kwargs = {
         "framerate": getattr(
-            args, f"{camera_name.lower()}_framerate", getattr(args, "framerate")
+            args,
+            f"{camera_name.lower()}_framerate",
+            getattr(args, "framerate"),
         ),
         "exposure": getattr(
             args, f"{camera_name.lower()}_exposure", getattr(args, "exposure")
