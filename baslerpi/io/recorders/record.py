@@ -151,7 +151,7 @@ class BaseRecorder(multiprocessing.Process):
         raise NotImplementedError
 
     def save_extra_data(self, *args, **kwargs):
-        return None
+        raise NotImplementedError
 
     def __str__(self):
         return f"Recorder {self.idx} on {self._data_queue.name} ({self._data_queue.qsize()}/{self._stop_queue.qsize()})"
@@ -164,9 +164,6 @@ class BaseRecorder(multiprocessing.Process):
         Collect frames from the source and write them to the video
         Periodically log #frames saved
         """
-
-        self._start_time = time.time()
-
         try:
             self._init_run()
             self._run()
@@ -179,6 +176,7 @@ class BaseRecorder(multiprocessing.Process):
         except Exception as error:
             print(error)
         finally:
+            print(f"{self} is closing the result_writer")
             self._async_writer._close()
 
             if self._data_queue.qsize() != 0:
@@ -201,9 +199,16 @@ class BaseRecorder(multiprocessing.Process):
             time.sleep(0.1)
 
         time.sleep(2)
+        print("Starting async writer...")
         self._async_writer.start()
+        time.sleep(1)
 
     def _run(self):
+
+        print(f"Async writer is running: {self._async_writer.is_alive()}")
+        if not self._async_writer.is_alive():
+            raise Exception("Async writer died prematurely")
+
 
         while self._async_writer.is_alive():
             self.report_cache_usage()
