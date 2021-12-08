@@ -30,6 +30,7 @@ class Monitor(threading.Thread):
         *args,
         sensor=None,
         camera_idx=0,
+        start_time=None,
         **kwargs,
     ):
 
@@ -38,8 +39,13 @@ class Monitor(threading.Thread):
 
         queue_size = int(self._RecorderClass._asyncWriterClass._CACHE_SIZE)
         rois = kwargs.pop("rois", None)
-        print(camera_name)
-        self.setup_camera(camera_name=camera_name, args=input_args, idx=camera_idx, rois=rois)
+        self.setup_camera(
+            camera_name=camera_name,
+            args=input_args,
+            idx=camera_idx,
+            rois=rois,
+            start_time=start_time,
+        )
 
         self._stop_queue = stop_queue
 
@@ -89,8 +95,9 @@ class Monitor(threading.Thread):
 
     def setup_camera(self, camera_name, args, **kwargs):
         self._camera_name = camera_name
-        print(kwargs)
-        camera = self._CAMERAS[camera_name](camera_name=camera_name, args=args, **kwargs)
+        camera = self._CAMERAS[camera_name](
+            args=args, camera_name=camera_name, **kwargs
+        )
 
         maxframes = getattr(args, "maxframes", None)
         camera.open(maxframes=maxframes)
@@ -103,18 +110,20 @@ class Monitor(threading.Thread):
 
     def open(self, path, **kwargs):
         for idx in range(len(self.camera.rois)):
-                        
+
             recorder_path = self.camera.configure_output_path(path, idx)
 
             self._recorders[idx].open(
                 path=recorder_path, logging_level=self._logging_level, **kwargs
             )
-            print(f"{self._recorders[idx]} for {self.camera} has recorder_path = {recorder_path}")
+            print(
+                f"{self._recorders[idx]} for {self.camera} has recorder_path = {recorder_path}"
+            )
 
     def run(self):
 
         logger.info("Monitor starting")
-        self._start_time = time.time()
+        self._start_time = self.camera._start_time
         for recorder in self._recorders:
             recorder._start_time = self._start_time
             recorder.start()
@@ -192,7 +201,7 @@ def run(monitor, **kwargs):
         monitor.start()
         time.sleep(5)
         monitor.join()
-        #while monitor.is_alive():
+        # while monitor.is_alive():
         #    print("Running time sleep forever")
         #    time.sleep(0.5)
 

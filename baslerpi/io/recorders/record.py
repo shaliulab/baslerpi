@@ -182,19 +182,18 @@ class BaseRecorder(multiprocessing.Process):
             self._async_writer._close()
 
             if self._data_queue.qsize() != 0:
-                #orphan_frames = self._data_queue.qsize()
-                #while self._data_queue.qsize() != 0:
+                # orphan_frames = self._data_queue.qsize()
+                # while self._data_queue.qsize() != 0:
                 #    try:
                 #        self._data_queue.get(False)
                 #    except queue.Empty:
                 #        pass
-                #print(self, f" has not terminated successfully: {orphan_frames} were orphaned")
+                # print(self, f" has not terminated successfully: {orphan_frames} were orphaned")
                 print(self, f" has not terminated successfully")
                 sys.exit(1)
             else:
                 print(self, " has terminated successfully")
                 return 0
-
 
     def _init_run(self):
         while not self._async_writer._need_to_run():
@@ -287,7 +286,9 @@ RECORDERS = {
 }
 
 
-def setup(args, recorder_name, source, sensor=None, idx=0, framerate=None, **kwargs):
+def setup(
+    args, recorder_name, source, sensor=None, idx=0, framerate=None, **kwargs
+):
 
     RecorderClass = RECORDERS[recorder_name]
 

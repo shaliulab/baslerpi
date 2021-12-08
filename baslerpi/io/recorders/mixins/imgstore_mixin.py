@@ -112,10 +112,10 @@ class AsyncWriter(threading.Thread):
 
     def _need_to_run(self):
         queue_is_empty = self._data_queue.qsize() == 0
-        #print(f"""
-        #Exit while loop because need_to_run:
-        #{self._stop_event.is_set()} and queue is empty: {queue_is_empty}
-        #""")
+        # print(f"""
+        # Exit while loop because need_to_run:
+        # {self._stop_event.is_set()} and queue is empty: {queue_is_empty}
+        # """)
 
         if not self._stop_event.is_set():
             result = not queue_is_empty
@@ -123,7 +123,7 @@ class AsyncWriter(threading.Thread):
             result = not queue_is_empty
 
         # print("Need to run: ", result)
-        #print(result) 
+        # print(result)
 
         return result
 
@@ -217,13 +217,14 @@ class AsyncWriter(threading.Thread):
                 )
             self._last_tick = self._timestamp
 
+
 class ImgStoreMixin:
     """
     Teach a Recorder class how to use Imgstore to write a video
     """
 
     _CHUNK_DURATION_SECONDS = 300
-    EXTRA_DATA_FREQ = 5000 #s
+    EXTRA_DATA_FREQ = 5000  # s
     _dtype = np.uint8
     # look here for possible formats:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
@@ -262,7 +263,7 @@ class ImgStoreMixin:
     def save_extra_data(self, timestamp):
 
         if self._sensor is not None and timestamp > (
-            (self.self._last_update + self.EXTRA_DATA_FREQ)*1000
+            (self.self._last_update + self.EXTRA_DATA_FREQ) * 1000
         ):
             environmental_data = self._sensor.query(timeout=1)
             if environmental_data is not None:

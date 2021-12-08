@@ -30,7 +30,8 @@ class BaseCamera:
         timeout=30000,
         resolution_decrease=None,
         rois=None,
-        idx=0
+        start_time=None,
+        idx=0,
     ):
         """
         The template class to generate and use video streams.
@@ -68,7 +69,7 @@ class BaseCamera:
         self._frame_idx = 0
         self._shape = (None, None)
         self._use_wall_clock = use_wall_clock
-        self._start_time = None
+        self._start_time = start_time
         self._target_framerate = framerate
         self._computed_framerate = 0
         self._framerate = framerate
@@ -90,7 +91,9 @@ class BaseCamera:
             try:
                 return [(0, 0, *self.resolution)]
             except:
-                raise Exception("Please open the camera before asking for its resolution")
+                raise Exception(
+                    "Please open the camera before asking for its resolution"
+                )
         else:
             return self._rois
 
