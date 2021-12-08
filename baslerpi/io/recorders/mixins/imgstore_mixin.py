@@ -88,7 +88,7 @@ class AsyncWriter(threading.Thread):
         self._n_saved_frames += 1
 
     def is_alive(self):
-        print(f"{self} is alive: {not self._stop_event.is_set()}")
+        # print(f"{self} is alive: {not self._stop_event.is_set()}")
         return not self._stop_event.is_set()
 
     def _handle_data_queue(self):
@@ -152,14 +152,14 @@ class AsyncWriter(threading.Thread):
     def _run(self):
         print("While loop")
         while True:
-            print("Handling data queue...")
+            # print("Handling data queue...")
             self._handle_data_queue()
 
-            print("Checking if we need to run...")
+            # print("Checking if we need to run...")
             if not self._need_to_run():
                 time.sleep(5)
                 if not self._need_to_run():
-                    print("I dont need to run anymore")
+                    # print("I dont need to run anymore")
                     break
 
 
@@ -196,6 +196,7 @@ class AsyncWriter(threading.Thread):
             # give a bit of time to the video writer to actually close
             time.sleep(2)
             print("Async writer has terminated successfully")
+            self._stop_event.set()
             return 0
 
     def _close(self):
@@ -238,8 +239,8 @@ class ImgStoreMixin:
     Teach a Recorder class how to use Imgstore to write a video
     """
 
-    _CHUNK_DURATION_SECONDS = 5
-    EXTRA_DATA_FREQ = 5000  # ms
+    _CHUNK_DURATION_SECONDS = 300 # seconds
+    EXTRA_DATA_FREQ = 1000  # ms
     _dtype = np.uint8
     # look here for possible formats:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
@@ -276,18 +277,21 @@ class ImgStoreMixin:
         return 0
 
     def save_extra_data(self, timestamp):
-        
-        # timestamp comes in ms
-        print(self.EXTRA_DATA_FREQ)
-        print(self._last_update)
-        print(timestamp)
-        
 
         if self._sensor is not None and timestamp > (
             (self._last_update + self.EXTRA_DATA_FREQ)
         ):
+                # timestamp comes in ms
+            # print("Full tick")
+            # print(f"Last update: {self._last_update}")
+            # print(f"EXTRA_DATA_FREQ: {self.EXTRA_DATA_FREQ}")
+            # print(f"Timestamp: {timestamp}")
+            # print(self._last_update + self.EXTRA_DATA_FREQ)
+
             environmental_data = self._sensor.query(timeout=1)
             if environmental_data is not None:
+                print("Saving environmental data")
+                print(environmental_data)
                 self._save_extra_data(
                     temperature=environmental_data["temperature"],
                     humidity=environmental_data["humidity"],
@@ -297,12 +301,13 @@ class ImgStoreMixin:
             self._last_update = timestamp
 
         else:
-            self._save_extra_data(
-                temperature=np.nan,
-                humidity=np.nan,
-                light=np.nan,
-                time=timestamp,
-            )
+            pass
+            # self._save_extra_data(
+            #     temperature=np.nan,
+            #     humidity=np.nan,
+            #     light=np.nan,
+            #     time=timestamp,
+            # )
 
     def open(self, path, logging_level=30, **kwargs):
 
