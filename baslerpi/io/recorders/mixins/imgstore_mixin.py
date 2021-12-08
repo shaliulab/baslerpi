@@ -240,7 +240,7 @@ class ImgStoreMixin:
     """
 
     _CHUNK_DURATION_SECONDS = 300 # seconds
-    EXTRA_DATA_FREQ = 1000  # ms
+    EXTRA_DATA_FREQ = 60000  # ms
     _dtype = np.uint8
     # look here for possible formats:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
