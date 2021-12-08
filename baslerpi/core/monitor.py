@@ -38,6 +38,7 @@ class Monitor(threading.Thread):
 
         queue_size = int(self._RecorderClass._asyncWriterClass._CACHE_SIZE)
         rois = kwargs.pop("rois", None)
+        print(camera_name)
         self.setup_camera(camera_name=camera_name, args=input_args, idx=camera_idx, rois=rois)
 
         self._stop_queue = stop_queue
@@ -79,7 +80,7 @@ class Monitor(threading.Thread):
                 stop_queue=self._stop_queues[i],
                 idx=i,
                 roi=self.camera.rois[i],
-                framerate=self.camera.framerate,
+                framerate=float(int(self.camera.framerate)),
                 **kwargs,
             )
             self._recorders.append(recorder)
@@ -89,7 +90,7 @@ class Monitor(threading.Thread):
     def setup_camera(self, camera_name, args, **kwargs):
         self._camera_name = camera_name
         print(kwargs)
-        camera = self._CAMERAS[camera_name](args, camera_name=camera_name, **kwargs)
+        camera = self._CAMERAS[camera_name](camera_name=camera_name, args=args, **kwargs)
 
         maxframes = getattr(args, "maxframes", None)
         camera.open(maxframes=maxframes)

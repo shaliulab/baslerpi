@@ -23,7 +23,7 @@ class AsyncWriter(threading.Thread):
     """
 
     _CACHE_SIZE = int(500)
-    INFO_FREQ = 2000 # ms
+    INFO_FREQ = 100 # ms
 
     def __init__(
         self,

@@ -46,7 +46,10 @@ class BaslerCamera(BaseCamera):
         """
         Return True if camera is opened
         """
-        return self.camera.IsOpen()
+        try:
+            return self.camera.IsOpen()
+        except:
+            return False
 
     def configure(self):
         """
@@ -107,16 +110,35 @@ class BaslerCamera(BaseCamera):
             if not getattr(self, "camera", False):
                 try:
                     # Get the transport layer factory.
+
                     tlFactory = pylon.TlFactory.GetInstance()
-                    devices = tlFactory.EnumerateDevices()
-                    if len(devices) == 0:
-                        raise pylon.RuntimeException("No camera present.")
-                    # Create an array of instant cameras for the found devices and avoid exceeding a maximum number of devices.
-                    # cameras = pylon.InstantCameraArray(min(len(devices), 2))
-                    self.camera = tlFactory.CreateDevice(devices[self.idx])
-                    # self.camera = pylon.InstantCamera(
-                    #     pylon.TlFactory.GetInstance().CreateFirstDevice()
-                    # )
+
+                    #devices = tlFactory.EnumerateDevices()
+                    #print(devices)
+                    #if len(devices) == 0:
+                    #    raise pylon.RuntimeException("No camera present.")
+                    ## Create an array of instant cameras for the found devices and avoid exceeding a maximum number of devices.
+                    #cameras = pylon.InstantCameraArray(1)
+                    #l = cameras.GetSize()
+                    #print(cameras)
+                    #print(self.idx)
+                    #print(l)
+
+                    #for camera in cameras:
+                    #    device = devices[self.idx]
+                    #    print(device)
+                    #    print("Creating device")
+                    #    camera_device = tlFactory.CreateDevice(device)
+                    #    camera.attach(camera_device)
+                    #    print("Using device ", camera.GetDeviceInfo().GetModelName())
+                    #    self.camera = camera
+                    #    break
+
+                    camera_device = tlFactory.CreateFirstDevice()
+                    print(camera_device)
+                    self.camera = pylon.InstantCamera(
+                       camera_device
+                    )
                 except Exception as error:
                     logger.error(
                         """
