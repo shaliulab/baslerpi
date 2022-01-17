@@ -342,7 +342,7 @@ def get_parser(ap=None):
         help="Frames Per Second of the video",
         required=False,
     )
-    ap.add_argument("--sensor", type=int, default=None)
+    ap.add_argument("--sensor", type=str, default=None)
     ap.add_argument("--duration", type=int, default=math.inf)
     ap.add_argument("--encoder", type=str)
     ap.add_argument("--fmt", type=str, default="mjpeg/avi")
