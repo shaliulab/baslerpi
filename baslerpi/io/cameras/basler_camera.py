@@ -84,8 +84,8 @@ class BaslerCamera(BaseCamera):
                 img = cv2.resize(
                     img,
                     (
-                        img.shape[1] // self._resolution_decrease,
-                        img.shape[0] // self._resolution_decrease,
+                        int(img.shape[1] // self._resolution_decrease),
+                        int(img.shape[0] // self._resolution_decrease),
                     ),
                     cv2.INTER_AREA,
                 )
