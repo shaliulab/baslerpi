@@ -1,14 +1,14 @@
 import json
 import urllib.request
 from socket import timeout as TimeoutException
-
+import logging
 
 class QuerySensor:
-    def __init__(self, port):
-        self._port = port
+    def __init__(self, resource):
+        self._resource = resource
 
     def query(self, timeout=1):
-        url = f"http://localhost:{self._port}"
+        url = f"http://{self._resource}"
         try:
             req = urllib.request.urlopen(url, timeout=timeout)
         except TimeoutException:

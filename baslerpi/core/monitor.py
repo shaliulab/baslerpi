@@ -126,6 +126,7 @@ class Monitor(threading.Thread):
         self._start_time = self.camera._start_time
         for recorder in self._recorders:
             recorder._start_time = self._start_time
+            recorder._async_writer._start_time = self._start_time
             recorder.start()
 
         for frame_idx, (timestamp, frame) in enumerate(self.camera):
@@ -147,6 +148,7 @@ class Monitor(threading.Thread):
                 except queue.Empty:
                     msg = None
                 if msg == "STOP":
+                    print(f"Setting {self} stop event")
                     self._stop_event.set()
 
             # print("New frame read")

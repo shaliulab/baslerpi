@@ -87,6 +87,10 @@ class AsyncWriter(threading.Thread):
         self._video_writer.add_image(frame, i, timestamp)
         self._n_saved_frames += 1
 
+    def is_alive(self):
+        # print(f"{self} is alive: {not self._stop_event.is_set()}")
+        return not self._stop_event.is_set()
+
     def _handle_data_queue(self):
         try:
             self._report_cache_usage()
@@ -95,6 +99,9 @@ class AsyncWriter(threading.Thread):
             pass
         except ServiceExit:
             self._handle_stop_queue()
+        except Exception as error:
+            logger.error(error)
+            logger.error(traceback.print_exc())
         else:
             timestamp, i, frame = data
             self._timestamp = timestamp
@@ -143,37 +150,42 @@ class AsyncWriter(threading.Thread):
         cv2.imwrite(last_shot_path, frame)
 
     def _run(self):
+        print("While loop")
         while True:
+            # print("Handling data queue...")
             self._handle_data_queue()
-            # if self._logging_level <= 10:
-            #     print("I will continue the while loop: ", self._need_to_run())
 
-            if self._need_to_run():
-                pass
-            else:
+            # print("Checking if we need to run...")
+            if not self._need_to_run():
                 time.sleep(5)
-                if self._need_to_run():
-                    pass
-                else:
+                if not self._need_to_run():
+                    # print("I dont need to run anymore")
                     break
+
 
             msg = self._handle_stop_queue()
             if msg == "STOP":
                 print("CMD STOP received. Stopping recording!")
+                print(f"Setting {self} stop event")
                 self._stop_event.set()
                 while not self._data_queue.empty():
                     self._handle_data_queue()
                     if self._data_queue.empty():
                         time.sleep(1)
 
+        print("While loop exit")
+
     def run(self):
         try:
+            print(f"{self}: First call to self._run")
             self._run()
+            print(f"{self}: End of first call to self._run")
         except ServiceExit:
             print("Service Exit received. Please wait")
             self._run()
         except Exception as error:
             print(error)
+            print(traceback.print_exc())
         finally:
             self._handle_stop_queue()
             # wait for the handling to be finished
@@ -184,12 +196,16 @@ class AsyncWriter(threading.Thread):
             # give a bit of time to the video writer to actually close
             time.sleep(2)
             print("Async writer has terminated successfully")
+            self._stop_event.set()
             return 0
 
     def _close(self):
         logger.info("Quiting recorder...")
         if self._make_tqdm:
             self._tqdm.close()
+
+        print(f"Setting {self} stop event")
+        self._stop_event.set()
 
     def _check_data_queue_is_busy(self):
         try:
@@ -223,8 +239,8 @@ class ImgStoreMixin:
     Teach a Recorder class how to use Imgstore to write a video
     """
 
-    _CHUNK_DURATION_SECONDS = 300
-    EXTRA_DATA_FREQ = 5000  # s
+    _CHUNK_DURATION_SECONDS = 300 # seconds
+    EXTRA_DATA_FREQ = 60000  # ms
     _dtype = np.uint8
     # look here for possible formats:
     # Video -> https://github.com/loopbio/imgstore/blob/d69035306d816809aaa3028b919f0f48455edb70/imgstore/stores.py#L932
@@ -263,10 +279,19 @@ class ImgStoreMixin:
     def save_extra_data(self, timestamp):
 
         if self._sensor is not None and timestamp > (
-            (self.self._last_update + self.EXTRA_DATA_FREQ) * 1000
+            (self._last_update + self.EXTRA_DATA_FREQ)
         ):
+                # timestamp comes in ms
+            # print("Full tick")
+            # print(f"Last update: {self._last_update}")
+            # print(f"EXTRA_DATA_FREQ: {self.EXTRA_DATA_FREQ}")
+            # print(f"Timestamp: {timestamp}")
+            # print(self._last_update + self.EXTRA_DATA_FREQ)
+
             environmental_data = self._sensor.query(timeout=1)
             if environmental_data is not None:
+                print("Saving environmental data")
+                print(environmental_data)
                 self._save_extra_data(
                     temperature=environmental_data["temperature"],
                     humidity=environmental_data["humidity"],
@@ -276,12 +301,13 @@ class ImgStoreMixin:
             self._last_update = timestamp
 
         else:
-            self._save_extra_data(
-                temperature=np.nan,
-                humidity=np.nan,
-                light=np.nan,
-                time=timestamp,
-            )
+            pass
+            # self._save_extra_data(
+            #     temperature=np.nan,
+            #     humidity=np.nan,
+            #     light=np.nan,
+            #     time=timestamp,
+            # )
 
     def open(self, path, logging_level=30, **kwargs):
 
