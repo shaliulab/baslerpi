@@ -51,6 +51,26 @@ class BaslerCamera(BaseCamera):
         except:
             return False
 
+    @property
+    def width(self):
+        if self._width is None:
+            try:
+                self._width = self.camera.Width.GetValue()
+            except Exception as error:
+                logger.warning(error)
+                self._width = None
+        return self._width
+
+    @property
+    def height(self):
+        if self._height is None:
+            try:
+                self._height = self.camera.Height.GetValue()
+            except Exception as error:
+                logger.warning(error)
+                self._height = None
+        return self._height
+
     def configure(self):
         """
         Set the exposure time and the framerate of the camera
@@ -60,8 +80,8 @@ class BaslerCamera(BaseCamera):
         self.framerate = self._target_framerate
         self.camera.ReverseX.SetValue(self.REVERSE_X)
         self.camera.ReverseY.SetValue(self.REVERSE_Y)
-        self.camera.Width.SetValue(self._width)
-        self.camera.Height.SetValue(self._height)
+        self.camera.Width.SetValue(self.width)
+        self.camera.Height.SetValue(self.height)
 
     @staticmethod
     def configure_output_path(path, idx):
@@ -81,11 +101,13 @@ class BaslerCamera(BaseCamera):
             img = grabResult.Array
             grabResult.Release()
             if self._resolution_decrease not in [1, None]:
+                self._width = int(img.shape[1] / self._resolution_decrease)
+                self._height = int(img.shape[0] / self._resolution_decrease)
                 img = cv2.resize(
                     img,
                     (
-                        int(img.shape[1] // self._resolution_decrease),
-                        int(img.shape[0] // self._resolution_decrease),
+                        self._width,
+                        self._height
                     ),
                     cv2.INTER_AREA,
                 )
@@ -246,8 +268,8 @@ class BaslerCamera(BaseCamera):
         Resolution = (number_horizontal_pixels, number_vertical_pixels)
         """
         self._resolution = (
-            self.camera.Width.GetValue(),
-            self.camera.Height.GetValue(),
+            self.width,
+            self.height,
         )
         return self._resolution
 
@@ -260,8 +282,8 @@ class BaslerCamera(BaseCamera):
         """
         # TODO Return number of channels!
         return (
-            self.camera.Height.GetValue(),
-            self.camera.Width.GetValue(),
+            self.height,
+            self.width,
             1,
         )
 
@@ -340,7 +362,7 @@ def get_parser(ap=None):
     ap.add_argument(
         "--resolution-decrease",
         dest="resolution_decrease",
-        type=int,
+        type=float,
         default=None,
     )
     ap.add_argument(
