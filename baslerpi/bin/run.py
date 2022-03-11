@@ -55,7 +55,7 @@ def setup(args, monitorClass=Monitor, **kwargs):
 
     level = LEVELS[args.verbose]
     setup_logger(level=level)
-    config = load_config(args)
+    config = load_config()
     monitor = monitorClass(
         camera_name=args.camera_name, input_args=args, **kwargs
     )
