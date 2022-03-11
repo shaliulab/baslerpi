@@ -1,7 +1,4 @@
-import logging
 import cv2
-
-logger = logging.getLogger("baslerpi.io.camera")
 
 class ROISMixin:
 
@@ -26,27 +23,21 @@ class ROISMixin:
         """
         Select 1 or more ROIs
         """
+        img = self._next_image_default()[0]
+        if self.resolution[0] > 1280 or self.resolution[1] > 960:
+            fx = self.resolution[0] / 1280
+            fy = self.resolution[1] / 960
+            img = cv2.resize(img, (1280, 960), cv2.INTER_AREA)
+        rois = cv2.selectROIs("select the area", img)
 
-        if self.is_open():
+        rois = [self._process_roi(list(roi), fx, fy) for roi in rois]
+        self._rois = rois
+        print("Selected ROIs")
+        for roi in self._rois:
+            print(roi)
+        cv2.destroyAllWindows()
+        return rois
 
-            img = self._next_image_default()[0]
-            if self.resolution[0] > 1280 or self.resolution[1] > 960:
-                fx = self.resolution[0] / 1280
-                fy = self.resolution[1] / 960
-                img = cv2.resize(img, (1280, 960), cv2.INTER_AREA)
-            rois = cv2.selectROIs("select the area", img)
-
-            rois = [self._process_roi(list(roi), fx, fy) for roi in rois]
-            self._rois = rois
-            print("Selected ROIs")
-            for roi in self._rois:
-                print(roi)
-            cv2.destroyAllWindows()
-            return rois
-
-        else:
-            logger.warning(f"{self} is not open")
-            return None
 
 
     def _next_image_rois(self):

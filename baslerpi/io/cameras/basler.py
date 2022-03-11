@@ -1,10 +1,8 @@
 # Standard library
 import argparse
 import logging
-import os.path
 import time
 import traceback
-import inspect
 import math
 import sys
 
