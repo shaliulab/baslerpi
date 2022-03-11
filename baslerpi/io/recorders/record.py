@@ -13,9 +13,8 @@ from baslerpi.io.recorders.mixins import (
     ImgStoreMixin,
 )
 
-# FORMAT="mjpeg/avi"
-FORMAT="h264/mp4"
-# FORMAT="avc1/mp4"
+# FORMAT="h264/mp4"
+FORMAT="h264_nvenc/mp4" # CUDA
 
 from baslerpi.exceptions import ServiceExit
 
