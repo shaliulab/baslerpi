@@ -1,9 +1,11 @@
+import sys
 import threading
 import traceback
 import logging
 import os
 import os.path
 import queue
+import collections
 
 import numpy as np
 import tqdm
@@ -13,6 +15,7 @@ import time
 import multiprocessing
 
 from baslerpi.exceptions import ServiceExit
+from baslerpi.decorators import timing
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +26,7 @@ class AsyncWriter(threading.Thread):
     """
 
     _CACHE_SIZE = int(500)
-    INFO_FREQ = 100 # ms
+    INFO_FREQ = 10000 # ms
 
     def __init__(
         self,
@@ -31,6 +34,7 @@ class AsyncWriter(threading.Thread):
         data_queue,
         stop_queue,
         path,
+        framerate,
         logging_level=30,
         make_tqdm=False,
         idx=0,
@@ -43,13 +47,15 @@ class AsyncWriter(threading.Thread):
         self._stop_event = threading.Event()
         self._stop_time = None
         self._fmt = fmt
-        self._video_writer = imgstore.new_for_format(fmt=fmt, **kwargs)
+        self._video_writer = imgstore.new_for_format(fmt=fmt, framerate=framerate, **kwargs)
         self._current_chunk = -1
         self._n_saved_frames = 0
         self._logging_level = logging_level
         self._timestamp = 0
         self._last_tick = 0
         self._cache_size = 0
+        self._write_latency = collections.deque([], int(framerate*10))
+        self._file_size = collections.deque([], int(framerate*10))
 
         self._path = path
         self._make_tqdm = make_tqdm
@@ -106,7 +112,17 @@ class AsyncWriter(threading.Thread):
             timestamp, i, frame = data
             self._timestamp = timestamp
             # print("Writing data to video imgstore writer")
+
+            before = time.time()
             self._write(timestamp, i, frame)
+            after = time.time()
+
+            ms_to_write = (after - before) * 1000
+            bytes = sys.getsizeof(frame)
+            MB = round(bytes / 1024, ndigits=2)
+            self._file_size.append(MB)
+            self._write_latency.append(ms_to_write)
+            
             # print("Checking if a new chunk is produced")
             if self._has_new_chunk():
                 self._save_first_frame_of_chunk(frame)
@@ -231,6 +247,12 @@ class AsyncWriter(threading.Thread):
                     self,
                     f" {self._cache_size}/{self._CACHE_SIZE} of buffer in use",
                 )
+
+                ms_latency_mean = np.array(self._write_latency).mean()
+                print(f"Average write time: {ms_latency_mean:.2f} ms")
+                file_size_mean = np.array(self._file_size).mean()
+                print(f"Average file size: {file_size_mean:.2f} MB")
+
             self._last_tick = self._timestamp
 
 
@@ -355,6 +377,7 @@ class ImgStoreMixin:
             self._lost_frames += 1
             logger.warning("Lost %5.d frames" % self._lost_frames)
 
+    #@timing
     def write(self, frame, i, timestamp):
 
         self._check_data_queue_is_not_full()

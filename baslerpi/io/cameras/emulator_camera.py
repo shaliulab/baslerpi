@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from .cameras import BaseCamera
+from .core import BaseCamera
 
 logger = logging.getLogger(__name__)
 

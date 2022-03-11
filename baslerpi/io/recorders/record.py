@@ -13,6 +13,10 @@ from baslerpi.io.recorders.mixins import (
     ImgStoreMixin,
 )
 
+# FORMAT="mjpeg/avi"
+FORMAT="h264/mp4"
+# FORMAT="avc1/mp4"
+
 from baslerpi.exceptions import ServiceExit
 
 logger = logging.getLogger("baslerpi.io.record")
@@ -343,9 +347,9 @@ def get_parser(ap=None):
         required=False,
     )
     ap.add_argument("--sensor", type=str, default=None)
-    ap.add_argument("--duration", type=int, default=math.inf)
+    ap.add_argument("--duration", type=int, default=math.inf, help="Recording duration in seconds")
     ap.add_argument("--encoder", type=str)
-    ap.add_argument("--fmt", type=str, default="mjpeg/avi")
+    ap.add_argument("--fmt", type=str, default=FORMAT)
     ap.add_argument("--crf", type=int)
     ap.add_argument(
         "--recorder",

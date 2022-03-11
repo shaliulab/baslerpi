@@ -1,1 +1,1 @@
-from .basler_camera import BaslerCamera
+from .basler import BaslerCamera

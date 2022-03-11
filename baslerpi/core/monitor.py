@@ -10,7 +10,7 @@ from baslerpi.io.recorders import ImgStoreRecorder
 from baslerpi.io.recorders.record import setup as setup_recorder
 
 from baslerpi.utils import document_for_reproducibility
-from baslerpi.io.cameras.basler_camera import setup as setup_camera
+from baslerpi.io.cameras.basler import setup as setup_camera
 from baslerpi.web_utils.sensor import setup as setup_sensor
 from baslerpi.exceptions import ServiceExit
 
@@ -111,7 +111,7 @@ class Monitor(threading.Thread):
     def open(self, path, **kwargs):
         for idx in range(len(self.camera.rois)):
 
-            recorder_path = self.camera.configure_output_path(path, idx)
+            recorder_path = f"{path.rstrip('/')}_ROI_{idx}"
 
             self._recorders[idx].open(
                 path=recorder_path, logging_level=self._logging_level, **kwargs
@@ -129,7 +129,25 @@ class Monitor(threading.Thread):
             recorder._async_writer._start_time = self._start_time
             recorder.start()
 
+        import cv2
         for frame_idx, (timestamp, frame) in enumerate(self.camera):
+
+            # print(f"Frame time {timestamp} ms")
+            # print("Frame shape", end=": ")
+            i=0
+            # print(frame[i].shape)
+            # before = time.time()
+            # cv2.imwrite("/home/vibflysleep/temp.png", frame[i])
+            # after = time.time()
+            # print(f"Time saving frame {1000*(after - before)}")
+
+            # if frame_idx > 20:
+            #     break
+            # else:
+            #     continue
+
+
+
 
             if self._stop_event.is_set():
                 # if self._logging_level <= 10:

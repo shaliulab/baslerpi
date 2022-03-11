@@ -1,5 +1,5 @@
 import cv2
-from .basler_camera import BaslerCamera
+from .basler import BaslerCamera
 
 
 class BaslerCameraDLC(BaslerCamera, DLCCamera):

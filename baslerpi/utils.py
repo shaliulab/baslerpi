@@ -31,7 +31,7 @@ def read_config_yaml(path):
 def document_for_reproducibility(recorder):
 
     metadata = {
-        "exposure-time": recorder.camera.exposuretime,
+        "exposure-time": recorder.camera.exposure,
         "framerate": recorder.camera.framerate,
         "python-version": sys.version,
         "baslerpi-version": baslerpi.__version__,
