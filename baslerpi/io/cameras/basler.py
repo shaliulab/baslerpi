@@ -296,7 +296,6 @@ def setup_and_run(args, **kwargs):
     setup_logger(level=level)
     camera = setup(args)
     maxframes = getattr(args, "maxframes", None)
-    camera.open(maxframes=maxframes)
     if args.select_rois:
         camera.select_ROIs()
     run(camera, preview=args.preview, **kwargs)

@@ -100,8 +100,6 @@ class Monitor(threading.Thread):
         )
 
         maxframes = getattr(args, "maxframes", None)
-        camera.open(maxframes=maxframes)
-
         if args.select_rois:
             camera.select_ROIs()
 

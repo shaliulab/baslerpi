@@ -274,7 +274,6 @@ if __name__ == "__main__":
         print("Please enter a valid camera class: OpenCV/Basler")
         sys.exit(1)
 
-    camera.open()
     # get a frame just to know what are the frame properties i.e. shape
     for (t, frame) in camera:
         break
