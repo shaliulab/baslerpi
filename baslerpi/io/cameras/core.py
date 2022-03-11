@@ -7,6 +7,7 @@ from baslerpi.io.cameras.plugins import ROISMixin, CameraUtils
 class BaseCamera(ROISMixin, CameraUtils):
     def __init__(
         self,
+        start_time=None,
         width=None,
         height=None,
         framerate=30,
@@ -66,7 +67,7 @@ class BaseCamera(ROISMixin, CameraUtils):
         self._frames_this_second = 0
         self._frame_idx = 0
         
-        self.start_time = time.time()
+        self.start_time = start_time or time.time()
         self.stopped = False
 
 
