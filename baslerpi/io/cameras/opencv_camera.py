@@ -119,19 +119,19 @@ class OpenCVCamera(BaseCamera):
         # self.camera.set(4, resolution[1])
 
     @property
-    def exposuretime(self):
-        return self._exposuretime
+    def exposure(self):
+        return self._exposure
 
-    @exposuretime.setter
-    def exposuretime(self, exposuretime):
-        self.camera.set(cv2.CAP_PROP_EXPOSURE, exposuretime)
-        self._exposuretime = exposuretime
+    @exposure.setter
+    def exposure(self, exposure):
+        self.camera.set(cv2.CAP_PROP_EXPOSURE, exposure)
+        self._exposure = exposure
 
-    @exposuretime.getter
-    def exposuretime(self):
-        exposuretime = self.camera.get(cv2.CAP_PROP_EXPOSURE)
-        self._exposuretime = exposuretime
-        return self._exposuretime
+    @exposure.getter
+    def exposure(self):
+        exposure = self.camera.get(cv2.CAP_PROP_EXPOSURE)
+        self._exposure = exposure
+        return self._exposure
 
     @property
     def shape(self):
