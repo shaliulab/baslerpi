@@ -155,6 +155,13 @@ class BaslerCamera(CV2Compatible):
         self.camera.AcquisitionFrameRateEnable.SetValue(True)
         self.camera.ExposureTime.SetValue(self._target_exposure)
         self.camera.AcquisitionFrameRate.SetValue(self._target_framerate)
+
+        if self._target_width is None:
+            self._target_width = self.camera.Width.GetMax()
+
+        if self._target_height is None:
+            self._target_height = self.camera.Height.GetMax()
+
         self.camera.Width.SetValue(self._target_width)
         self.camera.Height.SetValue(self._target_height)
         self.camera.ReverseX.SetValue(self.REVERSE_X)

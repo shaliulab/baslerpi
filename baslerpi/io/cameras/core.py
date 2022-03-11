@@ -7,8 +7,8 @@ from baslerpi.io.cameras.plugins import ROISMixin, CameraUtils
 class BaseCamera(ROISMixin, CameraUtils):
     def __init__(
         self,
-        width=1280,
-        height=960,
+        width=None,
+        height=None,
         framerate=30,
         exposure=15000,
         iso=0,
