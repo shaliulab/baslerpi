@@ -6,7 +6,7 @@ import json
 import sys
 import signal
 
-from baslerpi.io.cameras.basler_camera import (
+from baslerpi.io.cameras.basler import (
     get_parser as camera_parser,
 )
 

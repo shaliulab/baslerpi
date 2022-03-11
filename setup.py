@@ -49,7 +49,7 @@ setup(
     entry_points={
         "console_scripts": [
             "baslerpi=baslerpi.bin.run:main",
-            "baslerpi-test=baslerpi.io.cameras.basler_camera:main",
+            "baslerpi-test=baslerpi.io.cameras.basler:main",
         ]
     },
 )
