@@ -23,12 +23,13 @@ class ROISMixin:
         """
         Select 1 or more ROIs
         """
-        img = self._next_image_default()[0]
-        if self.resolution[0] > 1280 or self.resolution[1] > 960:
-            fx = self.resolution[0] / 1280
-            fy = self.resolution[1] / 960
-            img = cv2.resize(img, (1280, 960), cv2.INTER_AREA)
-        rois = cv2.selectROIs("select the area", img)
+        status, image = self._next_image_default()
+
+        if image.shape[1] > 1280 or image.shape[0] > 960:
+            fx = image.shape[1] / 1280
+            fy = image.shape[0] / 960
+            image = cv2.resize(image, (1280, 960), cv2.INTER_AREA)
+        rois = cv2.selectROIs("select the area", image)
 
         rois = [self._process_roi(list(roi), fx, fy) for roi in rois]
         self._rois = rois
