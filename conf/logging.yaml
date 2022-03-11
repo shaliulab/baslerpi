@@ -25,7 +25,7 @@ loggers:
     propagate: yes
   baslerpi.io.cameras.cameras:
     handlers: [console]
-    level: INFO
+    level: DEBUG
     propagate: no
   baslerpi.web_utils:
     handlers: [console]
@@ -46,9 +46,6 @@ loggers:
   baslerpi.processing.annotate:
     handlers: [console]
     propagate: no
-  __main__:
-    level: INFO
-    handlers: [console]
 
 
 root:
