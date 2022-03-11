@@ -121,7 +121,7 @@ class Monitor(threading.Thread):
     def run(self):
 
         logger.info("Monitor starting")
-        self._start_time = self.camera._start_time
+        self._start_time = self.camera.start_time
         for recorder in self._recorders:
             recorder._start_time = self._start_time
             recorder._async_writer._start_time = self._start_time
