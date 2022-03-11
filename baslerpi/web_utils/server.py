@@ -130,7 +130,6 @@ class TCPServer(threading.Thread):
                     else:
                         self.service_connection(key, mask)
 
-<<<<<<< HEAD:src/baslerpi/web_utils/server.py
         except KeyboardInterrupt:
             self._stop.set()
         finally:
@@ -138,9 +137,6 @@ class TCPServer(threading.Thread):
 
 
     def _run_single_threaded(self):
-=======
-    def run(self):
->>>>>>> 1efe90d:baslerpi/web_utils/server.py
         while not self._stop.is_set():
             success, frame = self.receive()
             if success:
@@ -177,15 +173,10 @@ class TCPServer(threading.Thread):
         logger.debug("Receiving frame")
         conn, addr = self._sock.accept()
         length = self.recvall(conn, 16)
-<<<<<<< HEAD:src/baslerpi/web_utils/server.py
         stringData = self.recvall(conn, int(length))
-        if len(stringData) == 0:
-=======
         try:
-            stringData = self.recvall(conn, int(length))
             data = np.frombuffer(stringData, dtype="uint8")
         except TypeError:
->>>>>>> 1efe90d:baslerpi/web_utils/server.py
             return False, None
         decimg = self.decode(stringData)
         if decimg is None:
