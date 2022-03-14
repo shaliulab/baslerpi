@@ -1,6 +1,16 @@
 import cv2
 
 class ROISMixin:
+    """
+    
+    Needed signatures
+
+    status, image = self._next_image_default()
+    width, height = self.resolution   
+    """
+
+    ROI_SEGMENTATION_PREVIEW_WIDTH = 1280
+    ROI_SEGMENTATION_PREVIEW_HEIGHT = 960
 
     @staticmethod
     def _crop_roi(image, roi):
@@ -25,10 +35,22 @@ class ROISMixin:
         """
         status, image = self._next_image_default()
 
-        if image.shape[1] > 1280 or image.shape[0] > 960:
-            fx = image.shape[1] / 1280
-            fy = image.shape[0] / 960
-            image = cv2.resize(image, (1280, 960), cv2.INTER_AREA)
+        if (
+            image.shape[1] > self.ROI_SEGMENTATION_PREVIEW_WIDTH or 
+            image.shape[0] > self.ROI_SEGMENTATION_PREVIEW_HEIGHT
+        ):
+            fx = image.shape[1] / self.ROI_SEGMENTATION_PREVIEW_WIDTH
+            fy = image.shape[0] / self.ROI_SEGMENTATION_PREVIEW_HEIGHT
+
+            image = cv2.resize(
+                image,
+                (
+                    self.ROI_SEGMENTATION_PREVIEW_WIDTH,
+                    self.ROI_SEGMENTATION_PREVIEW_HEIGHT
+                ),
+                cv2.INTER_AREA
+            )
+
         rois = cv2.selectROIs("select the area", image)
 
         rois = [self._process_roi(list(roi), fx, fy) for roi in rois]
@@ -51,6 +73,19 @@ class ROISMixin:
         for r in self.rois:
             data.append(self._crop_roi(image, r))
         return status, data
+
+
+    @property
+    def rois(self):
+        if self._rois is None:
+            try:
+                return [(0, 0, *self.resolution)]
+            except:
+                raise Exception(
+                    "Please open the camera before asking for its resolution"
+                )
+        else:
+            return self._rois
 
 
 

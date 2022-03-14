@@ -22,18 +22,6 @@ with open(f"{PACKAGE_NAME}/_version.py", "w") as fh:
 setup(
     name=PACKAGE_NAME,
     version=version,
-    # description="High resolution monitoring of Drosophila",
-    # long_description=README,
-    # long_description_content_type="text/markdown",
-    ##url="https://github.com/realpython/reader",
-    # author="Antonio Ortega",
-    # author_email="antonio.ortega@kuleuven.be",
-    # license="MIT",
-    # classifiers=[
-    #    "License :: OSI Approved :: MIT License",
-    #    "Programming Language :: Python :: 3",
-    #    "Programming Language :: Python :: 3.7",
-    # ],
     scripts=["src/rsync_transfer.sh"],
     packages=find_packages(),
     # include_package_data=True,
@@ -46,6 +34,9 @@ setup(
         "pypylon",
         "tqdm",
     ],
+    extras_require={
+        "dev": ["progressbar"]
+    },
     entry_points={
         "console_scripts": [
             "baslerpi=baslerpi.bin.run:main",

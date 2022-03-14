@@ -1,0 +1,3 @@
+ENCODER_FORMAT_CPU="mjpeg/avi" # NO CUDA
+ENCODER_FORMAT_GPU="h264_nvenc/mp4" # CUDA
+FMT_TO_CODEC = {"h264/avi": "libx264"}

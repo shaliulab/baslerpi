@@ -7,7 +7,7 @@ import threading
 import queue
 
 from baslerpi.io.recorders import ImgStoreRecorder
-from baslerpi.io.recorders.record import setup as setup_recorder
+from baslerpi.io.recorders.core import setup as setup_recorder
 
 from baslerpi.utils import document_for_reproducibility
 from baslerpi.io.cameras.basler import setup as setup_camera
@@ -188,11 +188,11 @@ class Monitor(threading.Thread):
                 while not recorder.all_queues_have_been_emptied:
                     time.sleep(1)
                     print("Waiting for", recorder)
-                    # recorder._report_cache_usage()
+                    # recorder._report_buffer_usage()
                 # print("Terminating")
                 # recorder.terminate()
                 print("Report one last time ", recorder)
-                recorder._async_writer._report_cache_usage()
+                recorder._async_writer._report_buffer_usage()
                 print("Close tqdm for ", recorder)
                 print("Joining", recorder)
             recorder.join()

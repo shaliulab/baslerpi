@@ -10,7 +10,7 @@ from baslerpi.io.cameras.basler import (
     get_parser as camera_parser,
 )
 
-from baslerpi.io.recorders.record import get_parser as recorder_parser
+from baslerpi.io.recorders.core import get_parser as recorder_parser
 from baslerpi.core.monitor import run as run_monitor
 from baslerpi.core import Monitor
 from baslerpi.exceptions import ServiceExit

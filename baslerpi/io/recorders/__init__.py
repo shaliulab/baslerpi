@@ -1,2 +1,1 @@
-from .record import FFMPEGRecorder
-from .record import ImgStoreRecorder
+from .record import RECORDERS, ImgStoreRecorder

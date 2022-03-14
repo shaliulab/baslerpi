@@ -1,10 +1,12 @@
 __author__ = "antonio"
 
 import time
+import logging
 from abc import abstractmethod
 from baslerpi.io.cameras.plugins import ROISMixin, CameraUtils
+from baslerpi.class_utils.time import TimeUtils
 
-class BaseCamera(ROISMixin, CameraUtils):
+class AbstractCamera:
     def __init__(
         self,
         start_time=None,
@@ -22,34 +24,10 @@ class BaseCamera(ROISMixin, CameraUtils):
         idx=0,
     ):
         """
-        The template class to generate and use video streams.
+        Abstract camera class template
         Inspired by the Ethoscope project.
-
-
-        Define:
-        __iter__: Make the class interable by calling _next_time_image in a smart way
-        __exit__: Calls the close method of derived classes
-        _next_time_image
-
-        Derived classes must define
-
-        open()
-        close()
-        _load_message()
-        is_open()
-        is_last_frame()
-
-        Derived classes can define
-        restart
-
-
-
-        :param drop_each: keep only ``1/drop_each``'th frame
-        :param args: additional arguments
-        :param kwargs: additional keyword arguments
         """
 
-        self.idx = idx
 
         self._target_width = width
         self._target_height = height
@@ -67,8 +45,18 @@ class BaseCamera(ROISMixin, CameraUtils):
         self._frames_this_second = 0
         self._frame_idx = 0
         
+        self.idx = idx
         self.start_time = start_time or time.time()
         self.stopped = False
+        self.isColor = False
+
+        if resolution_decrease != 1.0:
+            logging.warning("Resolution decrease is not implemented. Ignoring")
+
+    @property
+    @abstractmethod
+    def running_for_seconds(self):
+        raise NotImplementedError
 
 
     @abstractmethod
@@ -85,20 +73,29 @@ class BaseCamera(ROISMixin, CameraUtils):
 
     @abstractmethod
     def restart(self):
-        """
-        Restarts a camera (also resets time).
-        :return:
-        """
         raise NotImplementedError
 
     @abstractmethod
     def is_last_frame(self):
         raise NotImplementedError
-   
 
     @abstractmethod
-    def _next_image(self):
+    def _next_image_default(self):
         raise NotImplementedError
+
+    @abstractmethod
+    def _next_image_rois(self):
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def width(self):
+        return NotImplementedError
+
+    @property
+    @abstractmethod
+    def height(self):
+        return NotImplementedError
 
     @property
     def computed_framerate(self):
@@ -111,7 +108,8 @@ class BaseCamera(ROISMixin, CameraUtils):
         Convenience function to return resolution of camera.
         Resolution = (number_horizontal_pixels, number_vertical_pixels)
         """
-        return (self.width,
+        return (
+            self.width,
             self.height,
         )
         
@@ -135,17 +133,37 @@ class BaseCamera(ROISMixin, CameraUtils):
             )
 
 
-    @property
-    def rois(self):
-        if self._rois is None:
-            try:
-                return [(0, 0, *self.resolution)]
-            except:
-                raise Exception(
-                    "Please open the camera before asking for its resolution"
-                )
+    def is_last_frame(self):
+        if self._duration is None:
+            return False
+        return self._duration < self.running_for_seconds
+ 
+
+    def _next_image(self):
+        # NOTE
+        # Forcing here _next_image_rois() 
+        if self._rois is None:# and False:
+            return self._next_image_default()
         else:
-            return self._rois
+            return self._next_image_rois()
+
+
+    def _init_read(self):
+        """
+        Try reading a frame and check its resolution
+        """
+        status, img = self._next_image_default()
+
+        if status and img is not None:
+
+            logging.info(f"P{self} opened successfully")
+            logging.info(
+                "Resolution of incoming frames: %dx%d",
+                img.shape[1],
+                img.shape[0],
+            )
+        else:
+            raise Exception("The initial grab did not work")
 
 
     def time_stamp(self):
@@ -177,36 +195,34 @@ class BaseCamera(ROISMixin, CameraUtils):
         """
         Iterate thought consecutive frames of this camera.
 
-        :return: the time (in ms) and a frame (numpy array).
-        :rtype: (int, :class:`~numpy.ndarray`)
+        Returns:
+        
+            * t_ms (int): time of the frame in ms
+            * out (np.ndarray): frame
         """
-        at_least_one_frame = False
-          
-
+        
         try:
             while not self.stopped:
-                if self.is_last_frame():
-                    if not at_least_one_frame:
-                        raise Exception(
-                            "Camera could not read the first frame"
-                        )
-                    break
-
                 time_s, out = self._next_time_image()
 
                 if out is None:
                     break
 
                 t_ms = int(1000 * time_s)
-                at_least_one_frame = True
-
                 yield t_ms, out
 
         except KeyboardInterrupt:
             self.close()
 
 
+class BaseCamera(AbstractCamera, TimeUtils, ROISMixin, CameraUtils):
+    pass
+
 class CV2Compatible(BaseCamera):
+    """
+    Make the camera behave like a cv2.VideoCapture object
+    for 'duck-typing' compatibility
+    """
 
     def read(self):
         return self._next_image()
