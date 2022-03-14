@@ -7,7 +7,7 @@ from .record import RECORDERS
 
 
 def setup(
-    args, recorder_name, source, sensor=None, idx=0, framerate=None, **kwargs
+    args, recorder_name, sensor=None, idx=0, framerate=None, **kwargs
 ):
 
     RecorderClass = RECORDERS[recorder_name]
@@ -20,15 +20,13 @@ def setup(
     preview = getattr(args, "preview", False)
 
     recorder = RecorderClass(
-        source,
         framerate=framerate,
+        buffer_size=args.buffer_size,
         duration=args.duration,
         maxframes=maxframes,
         sensor=sensor,
-        crf=args.crf,
         encoder=args.encoder,
         preview=preview,
-        verbose=args.verbose,
         idx=idx,
         **kwargs,
     )
@@ -61,7 +59,7 @@ def main(args=None):
         resolution=(100, 100),
         framerate=30,
     )
-    recorder.open(path=output, fmt=args.fmt)
+    recorder.open(path=output, format=args.format)
     recorder.start()
     time.sleep(1)
     print("Started")

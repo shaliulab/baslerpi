@@ -6,11 +6,12 @@ import json
 import sys
 import signal
 
-from baslerpi.io.cameras.basler import (
+from scicam.utils import load_config
+from baslerpi.io.cameras.basler.parser import (
     get_parser as camera_parser,
 )
 
-from baslerpi.io.recorders.core import get_parser as recorder_parser
+from baslerpi.io.recorders.parser import get_parser as recorder_parser
 from baslerpi.core.monitor import run as run_monitor
 from baslerpi.core import Monitor
 from baslerpi.exceptions import ServiceExit
@@ -37,36 +38,25 @@ def setup_logger(level):
     recorder_logger.addHandler(console)
 
 
-def get_config_file():
-    if os.path.exists("/etc/flyhostel.conf"):
-        return "/etc/flyhostel.conf"
-    else:
-        return os.path.join(os.environ["HOME"], ".config", "flyhostel.conf")
-
-
-def load_config():
-    with open(get_config_file(), "r") as fh:
-        config = json.load(fh)
-
-    return config
-
 
 def setup(args, monitorClass=Monitor, **kwargs):
 
     level = LEVELS[args.verbose]
     setup_logger(level=level)
+    
     config = load_config()
-    monitor = monitorClass(
-        camera_name=args.camera_name, input_args=args, **kwargs
-    )
-    return config, monitor
-
-
-def setup_and_run(args, **kwargs):
-
-    config, monitor = setup(args)
     output = os.path.join(config["videos"]["folder"], args.output)
-    run_monitor(monitor, fmt=args.fmt, path=output, **kwargs)
+
+    monitor = monitorClass(
+        camera_name=args.camera_name, input_args=args, path=output, **kwargs
+    )
+    return monitor
+
+
+def setup_and_run(args):
+
+    monitor = setup(args)
+    run_monitor(monitor)
 
 
 def main(args=None, ap=None):

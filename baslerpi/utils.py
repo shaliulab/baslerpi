@@ -2,6 +2,9 @@ import baslerpi
 import skvideo
 import cv2
 import sys
+import os.path
+import json
+
 import imgstore
 import yaml
 
@@ -41,3 +44,18 @@ def document_for_reproducibility(recorder):
     }
 
     return metadata
+
+
+
+def get_config_file():
+    if os.path.exists("/etc/flyhostel.conf"):
+        return "/etc/flyhostel.conf"
+    else:
+        return os.path.join(os.environ["HOME"], ".config", "flyhostel.conf")
+
+
+def load_config():
+    with open(get_config_file(), "r") as fh:
+        config = json.load(fh)
+
+    return config

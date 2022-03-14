@@ -31,9 +31,9 @@ class FFMPEGMixin:
             logging.info("Using default outputdict")
             kwargs["outputdict"] = self.outputdict
 
-        if "fmt" in kwargs:
-            fmt = kwargs.pop("fmt")
-            kwargs["outputdict"]["-c:v"] = FMT_TO_CODEC[fmt]
+        if "format" in kwargs:
+            format = kwargs.pop("format")
+            kwargs["outputdict"]["-c:v"] = FMT_TO_CODEC[format]
 
         self._video_writer = skvideo.io.FFmpegWriter(**kwargs, verbosity=1)
 

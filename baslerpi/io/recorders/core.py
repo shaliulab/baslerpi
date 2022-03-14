@@ -31,7 +31,6 @@ class AbstractRecorder(multiprocessing.Process):
         preview=False,
         sensor=None,
         roi=None,
-        stop_queue=None,
         isColor=False,
     ):
         """

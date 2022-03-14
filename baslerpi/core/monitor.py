@@ -7,7 +7,7 @@ import threading
 import queue
 
 from baslerpi.io.recorders import ImgStoreRecorder
-from baslerpi.io.recorders.core import setup as setup_recorder
+from baslerpi.io.recorders import setup as setup_recorder
 
 from baslerpi.utils import document_for_reproducibility
 from baslerpi.io.cameras.basler import setup as setup_camera
@@ -37,7 +37,6 @@ class Monitor(threading.Thread):
         self._logging_level = int(LEVELS[input_args.verbose])
         self._camera_idx = camera_idx
 
-        queue_size = int(self._RecorderClass._asyncWriterClass._CACHE_SIZE)
         rois = kwargs.pop("rois", None)
         self.setup_camera(
             camera_name=camera_name,
@@ -48,13 +47,6 @@ class Monitor(threading.Thread):
         )
 
         self._stop_queue = stop_queue
-
-        self._queues = [
-            multiprocessing.Queue(maxsize=queue_size) for _ in self.camera.rois
-        ]
-        self._stop_queues = [
-            multiprocessing.Queue(maxsize=1) for _ in self.camera.rois
-        ]
 
         if sensor is None:
             sensor = setup_sensor(input_args)
@@ -75,15 +67,10 @@ class Monitor(threading.Thread):
                 }
             )
 
-            data_queue = self._queues[i]
-            data_queue.name = camera_name
-
             recorder = setup_recorder(
                 input_args,
                 *args,
                 recorder_name=self._RecorderClass.__name__,
-                source=data_queue,
-                stop_queue=self._stop_queues[i],
                 idx=i,
                 roi=self.camera.rois[i],
                 framerate=float(int(self.camera.framerate)),
@@ -106,13 +93,12 @@ class Monitor(threading.Thread):
         self.camera = camera
         return camera
 
-    def open(self, path, **kwargs):
+    def open(self, path):
         for idx in range(len(self.camera.rois)):
 
             recorder_path = f"{path.rstrip('/')}_ROI_{idx}"
-
             self._recorders[idx].open(
-                path=recorder_path, logging_level=self._logging_level, **kwargs
+                path=recorder_path
             )
             print(
                 f"{self._recorders[idx]} for {self.camera} has recorder_path = {recorder_path}"
